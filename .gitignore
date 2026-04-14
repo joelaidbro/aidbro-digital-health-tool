@@ -1,0 +1,6 @@
+aidbro-health-tool/backend/venv
+aidbro-health-tool/backend/__pycache__
+aidbro-health-tool/backend/routes/__pycache__
+aidbro-health-tool/backend/services/__pycache__
+aidbro-health-tool/backend/.env
+aidbro-health-tool/frontend/node_modules
