@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useAuth } from "../context/AuthContext"
 
 const BUSINESS_CATEGORIES = [
   { group: "Local Services", options: [
@@ -71,6 +72,7 @@ const SOCIAL_PLATFORMS = [
 ]
 
 export default function SearchForm({ onSearch }) {
+  const { isAuthenticated, isPaid } = useAuth()
   const [businessName, setBusinessName] = useState("")
   const [location, setLocation]         = useState("")
   const [category, setCategory]         = useState("")
@@ -126,6 +128,26 @@ export default function SearchForm({ onSearch }) {
           <a href="https://realsdigitalinnovations.com/contact.php" target="_blank" rel="noreferrer">
             Contact
           </a>
+          {isAuthenticated ? (
+            <a
+              href="/portal"
+              className="btn-primary"
+              style={{ padding: "8px 18px", fontSize: "13px" }}
+            >
+              {isPaid ? "My Reports" : "My Searches"}
+            </a>
+          ) : (
+            <>
+              <a href="/auth">Login</a>
+              <a
+                href="/register"
+                className="btn-primary"
+                style={{ padding: "8px 18px", fontSize: "13px" }}
+              >
+                Sign Up
+              </a>
+            </>
+          )}
           <a
             href="https://wa.me/918589999362"
             target="_blank"
@@ -157,6 +179,23 @@ export default function SearchForm({ onSearch }) {
             a full audit of your Google listing, website, social media, and reputation
             vs. local competitors. Works for any business across India.
           </p>
+
+          <div className="hero-returning-actions fade-up-d2">
+            {isAuthenticated ? (
+              <a href="/portal" className="btn-primary">
+                {isPaid ? "Open My Reports" : "Open My Searches"}
+              </a>
+            ) : (
+              <>
+                <a href="/auth" className="btn-secondary">
+                  Already have an account? Login
+                </a>
+                <a href="/register" className="btn-primary">
+                  Sign Up Free
+                </a>
+              </>
+            )}
+          </div>
 
           {/* Form Card */}
           <div className="search-card fade-up-d3">

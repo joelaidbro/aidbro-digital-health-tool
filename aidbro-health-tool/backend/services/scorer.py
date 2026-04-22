@@ -127,6 +127,7 @@ def calculate_score(
     pagespeed_data: dict,
     social_data: dict,
     category: str = "General Business",
+    seo_data: dict = None,
 ) -> dict:
     pillars = {}
 
@@ -232,8 +233,28 @@ def calculate_score(
             p2.append({"check": name, "passed": False, "points_earned": 0, "points_max": pts,
                        "value": "N/A", "message": "Requires a website.", "fix": "Build a website first.", "service": "Web Development"})
 
-    p2_score = min(sum(c["points_earned"] for c in p2), 25)
-    pillars["website"] = _pillar("Website Quality", "🌐", p2_score, 25, p2)
+    # ── Inject SEO crawler checks into Pillar 2 ───────────────────────────
+    # These come from seo_crawler.py and add up to 13 additional points.
+    # Pillar 2 max becomes 25 + 13 = 38, but we cap display at the earned total.
+    seo_checks = (seo_data or {}).get("checks", [])
+    if seo_checks:
+        for sc in seo_checks:
+            p2.append({
+                "check":         sc.get("check", ""),
+                "passed":        sc.get("passed", False),
+                "points_earned": sc.get("points_earned", 0),
+                "points_max":    sc.get("points_max", 0),
+                "value":         sc.get("value", ""),
+                "message":       sc.get("message", ""),
+                "fix":           sc.get("fix", ""),
+                "service":       sc.get("service", "Web Development"),
+                "skipped":       False,
+                "from_seo_crawler": True,  # tag for frontend display
+            })
+
+    p2_max   = sum(c["points_max"] for c in p2)
+    p2_score = min(sum(c["points_earned"] for c in p2), p2_max)
+    pillars["website"] = _pillar("Website Quality", "🌐", p2_score, p2_max, p2)
 
     # ══════════════════════════════════════════════════════════════════════
     # PILLAR 3 — Social Media Presence (20 pts) — CONTEXT-AWARE

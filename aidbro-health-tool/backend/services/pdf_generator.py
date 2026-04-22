@@ -1,328 +1,615 @@
+"""
+Aidbro Digital Health Report — PDF Generator v3
+=================================================
+Fixed: KeepTogether.flowables AttributeError
+Fixed: Table style applied before KeepTogether wrapping
+"""
+
 import io
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table,
-    TableStyle, HRFlowable, KeepTogether
+    TableStyle, HRFlowable, KeepTogether, PageBreak
 )
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 
-# ── Brand Colors ──────────────────────────────────────────────────────────────
-NAVY       = colors.HexColor("#060D1F")
-NAVY_LIGHT = colors.HexColor("#0F1E38")
-ORANGE     = colors.HexColor("#FF6B00")
-ORANGE_LT  = colors.HexColor("#FFB347")
-WHITE      = colors.white
-GRAY       = colors.HexColor("#A0AEC0")
-GRAY_LIGHT = colors.HexColor("#E2E8F0")
-GREEN      = colors.HexColor("#22C55E")
-YELLOW_C   = colors.HexColor("#EAB308")
-RED        = colors.HexColor("#EF4444")
+# ── Brand palette ─────────────────────────────────────────────────────────────
+NAVY        = colors.HexColor("#060D1F")
+NAVY_MID    = colors.HexColor("#0B1628")
+NAVY_LIGHT  = colors.HexColor("#0F1E38")
+ORANGE      = colors.HexColor("#FF6B00")
+ORANGE_LT   = colors.HexColor("#FF8C3A")
+WHITE       = colors.white
+GRAY        = colors.HexColor("#A0AEC0")
+GRAY_DIM    = colors.HexColor("#4A5568")
+GREEN       = colors.HexColor("#22C55E")
+YELLOW      = colors.HexColor("#EAB308")
+RED         = colors.HexColor("#EF4444")
+RED_DIM     = colors.HexColor("#2B0E0E")
+ORANGE_DIM  = colors.HexColor("#2A1800")
+
+W, H   = A4
+MARGIN = 14 * mm
+CW     = W - 2 * MARGIN
 
 
-def _pillar_color(color_key: str):
-    return {"green": GREEN, "yellow": YELLOW_C, "red": RED}.get(color_key, GRAY)
+def _c(color_key):
+    return {"green": GREEN, "yellow": YELLOW, "red": RED}.get(color_key, GRAY)
+
+
+def S(name, **kw):
+    return ParagraphStyle(name, **kw)
+
+
+def _bg(canvas, doc):
+    canvas.saveState()
+    canvas.setFillColor(NAVY)
+    canvas.rect(0, 0, W, H, fill=1, stroke=0)
+    canvas.setFillColor(colors.HexColor("#1A0900"))
+    canvas.rect(0, H - 18 * mm, W, 18 * mm, fill=1, stroke=0)
+    canvas.restoreState()
+
+
+def _hr(color=ORANGE, thickness=0.5):
+    return HRFlowable(width=CW, color=color, thickness=thickness, spaceAfter=3)
+
+
+def _section(title, st):
+    return [Paragraph(title, st["h2"]), _hr(), Spacer(1, 3 * mm)]
+
+
+def _styled_table(data, col_widths, style_cmds):
+    """Build and style a table — style is applied BEFORE any KeepTogether wrapping."""
+    t = Table(data, colWidths=col_widths)
+    t.setStyle(TableStyle(style_cmds))
+    return t
 
 
 def generate_pdf(
-    business_name: str,
-    location: str,
-    score_data: dict,
-    google_data: dict,
-    pagespeed_data: dict,
-    ai_insights: dict,
-) -> bytes:
-    """Generate a branded Aidbro Digital Health Report PDF."""
-
-    buffer = io.BytesIO()
+    business_name, location, score_data, google_data,
+    pagespeed_data, ai_insights, seo_data=None,
+    competitor_data=None, keyword_data=None,
+):
+    buf = io.BytesIO()
     doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        leftMargin=15 * mm,
-        rightMargin=15 * mm,
-        topMargin=12 * mm,
-        bottomMargin=12 * mm,
+        buf, pagesize=A4,
+        leftMargin=MARGIN, rightMargin=MARGIN,
+        topMargin=MARGIN,  bottomMargin=MARGIN,
     )
 
-    styles = getSampleStyleSheet()
+    st = {
+        "brand":  S("brand", fontSize=22, textColor=ORANGE,     fontName="Helvetica-Bold"),
+        "h1":     S("h1",    fontSize=20, textColor=WHITE,      fontName="Helvetica-Bold",  spaceAfter=4,  leading=24),
+        "h2":     S("h2",    fontSize=12, textColor=ORANGE,     fontName="Helvetica-Bold",  spaceAfter=3,  leading=16),
+        "h3":     S("h3",    fontSize=10, textColor=WHITE,      fontName="Helvetica-Bold",  spaceAfter=2,  leading=14),
+        "body":   S("body",  fontSize=8.5,textColor=GRAY,       fontName="Helvetica",       spaceAfter=3,  leading=13),
+        "small":  S("small", fontSize=7.5,textColor=GRAY_DIM,   fontName="Helvetica",       spaceAfter=2,  leading=11),
+        "small_o":S("smallo",fontSize=7.5,textColor=ORANGE_LT,  fontName="Helvetica",       spaceAfter=2,  leading=11),
+    }
+
     story = []
+    date  = datetime.now().strftime("%d %B %Y")
 
-    # ── Helper styles ─────────────────────────────────────────────────────────
-    def style(name, **kw):
-        return ParagraphStyle(name, **kw)
-
-    h1 = style("H1", fontSize=22, textColor=WHITE, fontName="Helvetica-Bold",
-               spaceAfter=4, leading=26)
-    h2 = style("H2", fontSize=14, textColor=ORANGE, fontName="Helvetica-Bold",
-               spaceAfter=4, leading=18)
-    h3 = style("H3", fontSize=11, textColor=WHITE, fontName="Helvetica-Bold",
-               spaceAfter=2, leading=14)
-    body = style("Body", fontSize=9, textColor=GRAY, fontName="Helvetica",
-                 spaceAfter=3, leading=13)
-    body_white = style("BodyW", fontSize=9, textColor=WHITE, fontName="Helvetica",
-                       spaceAfter=3, leading=13)
-    small = style("Small", fontSize=8, textColor=GRAY, fontName="Helvetica",
-                  spaceAfter=2, leading=11)
-    caption = style("Caption", fontSize=8, textColor=ORANGE, fontName="Helvetica-Bold",
-                    spaceAfter=1)
-
-    W, H = A4
-    content_width = W - 30 * mm
-
-    total = score_data.get("total_score", 0)
-    grade = score_data.get("grade", "?")
-    label = score_data.get("label", "")
+    total   = score_data.get("total_score", 0)
+    grade   = score_data.get("grade", "?")
+    label   = score_data.get("label", "")
     pillars = score_data.get("pillars", {})
-    top_fixes = score_data.get("top_fixes", [])
-    is_mocked = score_data.get("is_mocked", False)
-    date_str = datetime.now().strftime("%d %B %Y")
+    fixes   = score_data.get("top_fixes", [])
+    sc      = GREEN if total >= 70 else (YELLOW if total >= 50 else RED)
 
-    # ── HEADER BANNER ─────────────────────────────────────────────────────────
-    header_data = [[
-        Paragraph("AIDBRO", style("Brand", fontSize=18, textColor=ORANGE,
-                                  fontName="Helvetica-Bold")),
-        Paragraph(
-            f"<b>Digital Health Report</b><br/><font size=8 color='#A0AEC0'>"
-            f"Powered by Reals Digital Innovations · {date_str}</font>",
-            style("HdrR", fontSize=11, textColor=WHITE,
-                  fontName="Helvetica-Bold", alignment=TA_RIGHT)
-        )
-    ]]
-    header_table = Table(header_data, colWidths=[content_width * 0.5, content_width * 0.5])
-    header_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), NAVY),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ("LEFTPADDING", (0, 0), (0, -1), 10),
-        ("RIGHTPADDING", (-1, 0), (-1, -1), 10),
-        ("ROUNDEDCORNERS", [4, 4, 4, 4]),
-    ]))
-    story.append(header_table)
-    story.append(Spacer(1, 5 * mm))
-
-    # ── BUSINESS INFO + BIG SCORE ─────────────────────────────────────────────
-    score_color = GREEN if total >= 70 else (YELLOW_C if total >= 50 else RED)
-
-    info_col = [
-        Paragraph(f"<b>{business_name}</b>", h1),
-        Paragraph(f"📍 {location}", style("Loc", fontSize=10, textColor=GRAY,
-                                          fontName="Helvetica")),
-        Spacer(1, 3 * mm),
-        Paragraph(ai_insights.get("greeting", ""), body_white),
-        Spacer(1, 2 * mm),
-        Paragraph(ai_insights.get("summary", ""), body),
-    ]
-    if is_mocked:
-        info_col.append(Paragraph(
-            "⚠️ Demo mode — scores shown are illustrative only.",
-            style("Mock", fontSize=8, textColor=YELLOW_C, fontName="Helvetica-Oblique")
-        ))
-
-    grade_label_color = score_color
-
-    score_col = [
-        Table(
-            [[Paragraph(str(total), style("ScoreNum", fontSize=48,
-                                          textColor=score_color, fontName="Helvetica-Bold",
-                                          alignment=TA_CENTER))]],
-            colWidths=[50 * mm],
-            rowHeights=[55 * mm]
-        ),
-        Paragraph(f"<b>Grade: {grade}</b>", style("Grade", fontSize=14,
-                                                    textColor=score_color,
-                                                    fontName="Helvetica-Bold",
-                                                    alignment=TA_CENTER)),
-        Paragraph(label, style("Label", fontSize=10, textColor=GRAY,
-                               fontName="Helvetica", alignment=TA_CENTER)),
-    ]
-
-    top_table = Table(
-        [[info_col, score_col]],
-        colWidths=[content_width * 0.68, content_width * 0.32]
+    # ── HEADER ────────────────────────────────────────────────────────────────
+    hdr = _styled_table(
+        [[Paragraph("AIDBRO", st["brand"]),
+          Paragraph(
+              f"<b>Digital Health Report</b><br/>"
+              f"<font size=7 color='#A0AEC0'>Reals Digital Innovations · {date}</font>",
+              S("hr", fontSize=10, textColor=WHITE, fontName="Helvetica-Bold",
+                alignment=TA_RIGHT, leading=14)
+          )]],
+        [CW * 0.5, CW * 0.5],
+        [("BACKGROUND",(0,0),(-1,-1),NAVY_LIGHT),
+         ("TOPPADDING",(0,0),(-1,-1),10),
+         ("BOTTOMPADDING",(0,0),(-1,-1),10),
+         ("LEFTPADDING",(0,0),(0,-1),12),
+         ("RIGHTPADDING",(-1,0),(-1,-1),12),
+         ("LINEBELOW",(0,0),(-1,-1),1.5,ORANGE)],
     )
-    top_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), NAVY_LIGHT),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 10),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
-        ("LEFTPADDING", (0, 0), (0, -1), 12),
-        ("RIGHTPADDING", (-1, 0), (-1, -1), 10),
-        ("ROUNDEDCORNERS", [6, 6, 6, 6]),
-    ]))
-    story.append(top_table)
+    story.append(hdr)
     story.append(Spacer(1, 5 * mm))
 
-    # ── PILLAR SCORES BAR ─────────────────────────────────────────────────────
-    story.append(Paragraph("PILLAR SCORES", h2))
-    story.append(HRFlowable(width=content_width, color=ORANGE, thickness=0.5))
-    story.append(Spacer(1, 2 * mm))
+    # ── BUSINESS INFO + SCORE ─────────────────────────────────────────────────
+    info_items = [
+        Paragraph(f"<b>{business_name}</b>", st["h1"]),
+        Paragraph(f"📍 {google_data.get('address', location)}",
+                  S("loc", fontSize=9, textColor=GRAY, fontName="Helvetica")),
+        Spacer(1, 2 * mm),
+    ]
+    for icon, key in [("📞 ", "phone"), ("🌐 ", "website")]:
+        val = google_data.get(key, "")
+        if val:
+            info_items.append(Paragraph(
+                icon + val.replace("https://","").replace("http://",""),
+                S(f"i{key}", fontSize=9, textColor=GRAY if key=="phone" else ORANGE_LT,
+                  fontName="Helvetica")
+            ))
+    if score_data.get("category"):
+        info_items.append(Paragraph(f"🏢 {score_data['category']}",
+                  S("cat", fontSize=9, textColor=GRAY, fontName="Helvetica")))
+    info_items += [
+        Spacer(1, 3*mm),
+        Paragraph(ai_insights.get("greeting",""),
+                  S("gr", fontSize=9, textColor=WHITE, fontName="Helvetica-Bold", leading=13)),
+        Spacer(1, 2*mm),
+        Paragraph(ai_insights.get("summary",""), st["body"]),
+    ]
 
-    pillar_rows = []
-    for key, p in pillars.items():
-        bar_filled = round((p["score"] / p["max"]) * 20)
-        bar = "█" * bar_filled + "░" * (20 - bar_filled)
-        pillar_rows.append([
-            Paragraph(f"{p['icon']} {p['name']}", style(
-                "PI", fontSize=9, textColor=WHITE, fontName="Helvetica-Bold")),
-            Paragraph(bar, style("Bar", fontSize=7, textColor=_pillar_color(p["color"]),
-                                 fontName="Courier")),
-            Paragraph(f"<b>{p['score']}/{p['max']}</b>", style(
-                "PScore", fontSize=10, textColor=_pillar_color(p["color"]),
-                fontName="Helvetica-Bold", alignment=TA_RIGHT)),
+    score_col = _styled_table(
+        [[Paragraph(str(total), S("sn", fontSize=12, textColor=sc,
+                                   fontName="Helvetica-Bold", alignment=TA_CENTER))],
+         [Paragraph(f"<b>Grade: {grade}</b>",
+                    S("g2", fontSize=12, textColor=sc,
+                      fontName="Helvetica-Bold", alignment=TA_CENTER))],
+         [Paragraph(label, S("lb", fontSize=9, textColor=GRAY,
+                              fontName="Helvetica", alignment=TA_CENTER))],
+         [Paragraph("/ 100", S("d", fontSize=9, textColor=GRAY_DIM,
+                                fontName="Helvetica", alignment=TA_CENTER))]],
+        [CW * 0.28],
+        [("BACKGROUND",(0,0),(-1,-1),NAVY_MID),
+         ("TOPPADDING",(0,0),(-1,-1),4),
+         ("BOTTOMPADDING",(0,0),(-1,-1),4),
+         ("ALIGN",(0,0),(-1,-1),"CENTER"),
+         ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+         ("LINEBEFORE",(0,0),(0,-1),1,ORANGE)],
+    )
+
+    hero = _styled_table(
+        [[info_items, score_col]],
+        [CW * 0.70, CW * 0.30],
+        [("BACKGROUND",(0,0),(-1,-1),NAVY_MID),
+         ("VALIGN",(0,0),(-1,-1),"TOP"),
+         ("TOPPADDING",(0,0),(0,-1),10),
+         ("BOTTOMPADDING",(0,0),(0,-1),10),
+         ("LEFTPADDING",(0,0),(0,-1),12),
+         ("RIGHTPADDING",(-1,0),(-1,-1),0),
+         ("LINEBELOW",(0,0),(-1,-1),1,ORANGE)],
+    )
+    story.append(hero)
+    story.append(Spacer(1, 5 * mm))
+
+    # ── PILLAR BARS ───────────────────────────────────────────────────────────
+    story.extend(_section("PILLAR SCORES", st))
+
+    bar_rows = []
+    for p in pillars.values():
+        pct      = p.get("percent", 0)
+        bar_fill = round(pct / 5)
+        bar_str  = "█" * bar_fill + "░" * (20 - bar_fill)
+        color    = _c(p.get("color", "red"))
+        bar_rows.append([
+            Paragraph(f"{p['icon']}  {p['name']}", st["h3"]),
+            Paragraph(bar_str, S("bar", fontSize=6.5, textColor=color, fontName="Courier")),
+            Paragraph(f"<b>{p['score']}/{p['max']}</b>",
+                      S("ps", fontSize=10, textColor=color,
+                        fontName="Helvetica-Bold", alignment=TA_RIGHT)),
         ])
 
-    pillar_table = Table(
-        pillar_rows,
-        colWidths=[content_width * 0.30, content_width * 0.50, content_width * 0.20]
-    )
-    pillar_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), NAVY_LIGHT),
-        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [NAVY_LIGHT, NAVY]),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("LEFTPADDING", (0, 0), (0, -1), 10),
-        ("RIGHTPADDING", (-1, 0), (-1, -1), 10),
-    ]))
-    story.append(pillar_table)
+    story.append(_styled_table(
+        bar_rows,
+        [CW*0.30, CW*0.52, CW*0.18],
+        [("ROWBACKGROUNDS",(0,0),(-1,-1),[NAVY_LIGHT, NAVY_MID]),
+         ("TOPPADDING",(0,0),(-1,-1),7),
+         ("BOTTOMPADDING",(0,0),(-1,-1),7),
+         ("LEFTPADDING",(0,0),(-1,-1),10),
+         ("RIGHTPADDING",(-1,0),(-1,-1),10),
+         ("VALIGN",(0,0),(-1,-1),"MIDDLE")],
+    ))
     story.append(Spacer(1, 5 * mm))
 
     # ── DETAILED CHECKS ───────────────────────────────────────────────────────
-    story.append(Paragraph("DETAILED ANALYSIS", h2))
-    story.append(HRFlowable(width=content_width, color=ORANGE, thickness=0.5))
-    story.append(Spacer(1, 2 * mm))
+    story.extend(_section("DETAILED ANALYSIS", st))
 
-    for key, p in pillars.items():
-        check_rows = [
-            [
-                Paragraph("✓" if c["passed"] else "✗", style(
-                    "Tick", fontSize=10,
-                    textColor=GREEN if c["passed"] else RED,
-                    fontName="Helvetica-Bold", alignment=TA_CENTER)),
-                Paragraph(c["check"], style("CkName", fontSize=8,
-                                            textColor=WHITE, fontName="Helvetica-Bold")),
-                Paragraph(c.get("value", ""), style("CkVal", fontSize=8,
-                                                     textColor=ORANGE_LT,
-                                                     fontName="Helvetica")),
-                Paragraph(c["message"], body),
-                Paragraph(f"+{c['points_earned']}/{c['points_max']}", style(
-                    "Pts", fontSize=8,
-                    textColor=GREEN if c["passed"] else RED,
-                    fontName="Helvetica-Bold", alignment=TA_RIGHT)),
-            ]
-            for c in p["checks"]
-        ]
+    for p in pillars.values():
+        check_rows = []
+        for c in p.get("checks", []):
+            if c.get("skipped") and c.get("points_max", 0) == 0:
+                continue
+            passed = c.get("passed", False)
 
-        section = KeepTogether([
-            Paragraph(f"{p['icon']}  {p['name'].upper()}", h3),
-            Table(
-                check_rows,
-                colWidths=[
-                    content_width * 0.04,
-                    content_width * 0.23,
-                    content_width * 0.12,
-                    content_width * 0.48,
-                    content_width * 0.13,
-                ]
-            )
-        ])
+            # Build fix paragraph if needed
+            body_content = c.get("message","")
+            if not passed and c.get("fix"):
+                body_content += f"<br/><font color='#FF8C3A'>→ {c['fix']}</font>"
 
-        tbl = section.flowables[-1]
-        tbl.setStyle(TableStyle([
-            ("ROWBACKGROUNDS", (0, 0), (-1, -1), [NAVY, NAVY_LIGHT]),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING", (-1, 0), (-1, -1), 6),
-        ]))
+            check_rows.append([
+                Paragraph("✓" if passed else "✗",
+                          S("tk", fontSize=10,
+                            textColor=GREEN if passed else RED,
+                            fontName="Helvetica-Bold", alignment=TA_CENTER)),
+                Paragraph(c.get("check",""),
+                          S("cn", fontSize=8, textColor=WHITE, fontName="Helvetica-Bold")),
+                Paragraph(str(c.get("value","") or ""),
+                          S("cv", fontSize=7.5, textColor=ORANGE_LT, fontName="Helvetica")),
+                Paragraph(body_content, st["body"]),
+                Paragraph(f"+{c.get('points_earned',0)}/{c.get('points_max',0)}",
+                          S("pts", fontSize=8,
+                            textColor=GREEN if passed else RED,
+                            fontName="Helvetica-Bold", alignment=TA_RIGHT)),
+            ])
 
-        story.append(section)
+        if not check_rows:
+            continue
+
+        # ── FIX: Build table first, style it, THEN wrap in KeepTogether ──────
+        check_table = _styled_table(
+            check_rows,
+            [CW*0.04, CW*0.22, CW*0.11, CW*0.50, CW*0.13],
+            [("ROWBACKGROUNDS",(0,0),(-1,-1),[NAVY_MID, NAVY_LIGHT]),
+             ("TOPPADDING",(0,0),(-1,-1),4),
+             ("BOTTOMPADDING",(0,0),(-1,-1),4),
+             ("LEFTPADDING",(0,0),(-1,-1),6),
+             ("RIGHTPADDING",(-1,0),(-1,-1),6),
+             ("VALIGN",(0,0),(-1,-1),"TOP")],
+        )
+
+        pillar_header = Paragraph(
+            f"{p['icon']}  {p['name'].upper()}",
+            S("ph", fontSize=9, textColor=_c(p.get("color","red")),
+              fontName="Helvetica-Bold", spaceAfter=3)
+        )
+
+        # KeepTogether takes pre-built flowables — no .flowables access needed
+        section_block = KeepTogether([pillar_header, check_table])
+        story.append(section_block)
         story.append(Spacer(1, 3 * mm))
 
-    # ── TOP PRIORITY FIXES ────────────────────────────────────────────────────
-    if top_fixes:
-        story.append(Paragraph("🎯  TOP PRIORITY FIXES", h2))
-        story.append(HRFlowable(width=content_width, color=ORANGE, thickness=0.5))
-        story.append(Spacer(1, 2 * mm))
+    # ── SEO AUDIT SUMMARY ─────────────────────────────────────────────────────
+    if seo_data and not seo_data.get("error"):
+        story.append(Spacer(1, 2*mm))
+        story.extend(_section("SEO SITE AUDIT", st))
 
-        fix_rows = [
-            [
-                Paragraph(f"#{i+1}", style("FN", fontSize=12, textColor=ORANGE,
-                                            fontName="Helvetica-Bold", alignment=TA_CENTER)),
-                Paragraph(f"<b>{f['check']}</b><br/>{f['fix']}",
-                          style("FT", fontSize=9, textColor=WHITE,
-                                fontName="Helvetica", leading=13)),
-                Paragraph(f"Aidbro Service:<br/><b>{f['service']}</b>",
-                          style("FS", fontSize=8, textColor=ORANGE_LT,
-                                fontName="Helvetica", alignment=TA_RIGHT, leading=12)),
-            ]
-            for i, f in enumerate(top_fixes[:3])
+        summary = seo_data.get("summary", {})
+        site    = seo_data.get("site_level", {})
+        issues  = seo_data.get("issues", [])
+        recs    = seo_data.get("recommendations", [])
+
+        # Stat grid
+        stat_pairs = [
+            ("robots.txt",    "✓ Found"   if site.get("has_robots_txt")    else "✗ Missing",  site.get("has_robots_txt")),
+            ("sitemap.xml",   "✓ Found"   if site.get("has_sitemap")       else "✗ Missing",  site.get("has_sitemap")),
+            ("HTTPS",         "✓ Secure"  if site.get("all_pages_https")   else "✗ Insecure", site.get("all_pages_https")),
+            ("Schema Markup", "✓ Found"   if summary.get("has_schema")     else "✗ Missing",  summary.get("has_schema")),
+            ("Open Graph",    "✓ Complete"if summary.get("og_complete")    else "✗ Incomplete",summary.get("og_complete")),
+            ("Word Count",    f"{summary.get('homepage_word_count',0)} words",
+                              (summary.get("homepage_word_count",0) >= 300)),
+            ("Alt Text",
+                              f"{summary.get('images_missing_alt',0)} missing" if summary.get("images_missing_alt",0) > 0 else "✓ All OK",
+                              summary.get("images_missing_alt",0) == 0),
+            ("Load Time",
+                              f"{seo_data.get('pages',[{}])[0].get('load_time_ms','?')}ms" if seo_data.get("pages") else "N/A",
+                              True),
         ]
-        fix_table = Table(
-            fix_rows,
-            colWidths=[content_width * 0.06, content_width * 0.65, content_width * 0.29]
+
+        # 2 rows × 4 cols
+        seo_grid_rows = []
+        for i in range(0, 8, 4):
+            row = []
+            for label, value, ok in stat_pairs[i:i+4]:
+                cell = _styled_table(
+                    [[Paragraph(label, S("sl",fontSize=7.5,textColor=GRAY,
+                                         fontName="Helvetica",alignment=TA_CENTER))],
+                     [Paragraph(value, S("sv",fontSize=8.5,
+                                          textColor=GREEN if ok else RED,
+                                          fontName="Helvetica-Bold",alignment=TA_CENTER))]],
+                    [(CW/4) - 3*mm],
+                    [("BACKGROUND",(0,0),(-1,-1),NAVY_LIGHT),
+                     ("TOPPADDING",(0,0),(-1,-1),6),
+                     ("BOTTOMPADDING",(0,0),(-1,-1),6),
+                     ("ALIGN",(0,0),(-1,-1),"CENTER")],
+                )
+                row.append(cell)
+            seo_grid_rows.append(row)
+
+        seo_grid = _styled_table(
+            seo_grid_rows,
+            [CW/4]*4,
+            [("BACKGROUND",(0,0),(-1,-1),NAVY_LIGHT),
+             ("GRID",(0,0),(-1,-1),0.5,NAVY_MID),
+             ("TOPPADDING",(0,0),(-1,-1),6),
+             ("BOTTOMPADDING",(0,0),(-1,-1),6),
+             ("LEFTPADDING",(0,0),(-1,-1),4),
+             ("RIGHTPADDING",(-1,0),(-1,-1),4)],
         )
-        fix_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), NAVY_LIGHT),
-            ("ROWBACKGROUNDS", (0, 0), (-1, -1), [NAVY, NAVY_LIGHT]),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING", (0, 0), (-1, -1), 8),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-            ("LEFTPADDING", (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING", (-1, 0), (-1, -1), 8),
-        ]))
-        story.append(fix_table)
-        story.append(Spacer(1, 5 * mm))
+        story.append(seo_grid)
+        story.append(Spacer(1, 4*mm))
+
+        # Google search preview
+        hp = seo_data.get("pages", [{}])[0] if seo_data.get("pages") else {}
+        if hp.get("title"):
+            story.append(Paragraph("Google Search Preview", st["h3"]))
+            story.append(Spacer(1, 2*mm))
+            preview_rows = [
+                [Paragraph(seo_data.get("url","").replace("https://","").replace("http://",""),
+                           S("pu",fontSize=8,textColor=GREEN,fontName="Helvetica"))],
+                [Paragraph(hp.get("title",""),
+                           S("pt",fontSize=11,textColor=colors.HexColor("#8ab4f8"),
+                             fontName="Helvetica-Bold",leading=14))],
+            ]
+            if hp.get("meta_description"):
+                preview_rows.append([
+                    Paragraph(hp["meta_description"][:160],
+                              S("pd",fontSize=8,textColor=GRAY,fontName="Helvetica",leading=12))
+                ])
+            story.append(_styled_table(
+                preview_rows, [CW],
+                [("BACKGROUND",(0,0),(-1,-1),NAVY_MID),
+                 ("TOPPADDING",(0,0),(-1,-1),6),
+                 ("BOTTOMPADDING",(0,0),(-1,-1),6),
+                 ("LEFTPADDING",(0,0),(-1,-1),10),
+                 ("RIGHTPADDING",(-1,0),(-1,-1),10),
+                 ("LINEABOVE",(0,0),(-1,0),1,ORANGE_LT)],
+            ))
+            story.append(Spacer(1, 4*mm))
+
+        # Critical issues
+        crits = [i for i in issues if i["severity"]=="critical"][:4]
+        if crits:
+            story.append(Paragraph("Critical SEO Issues", st["h3"]))
+            story.append(Spacer(1, 2*mm))
+            story.append(_styled_table(
+                [[Paragraph("🔴",S("ii",fontSize=9,fontName="Helvetica")),
+                  Paragraph(i["issue"],S("it",fontSize=8,textColor=RED,fontName="Helvetica-Bold")),
+                  Paragraph(i["fix"],st["body"])] for i in crits],
+                [CW*0.04, CW*0.34, CW*0.62],
+                [("BACKGROUND",(0,0),(-1,-1),RED_DIM),
+                 ("TOPPADDING",(0,0),(-1,-1),5),
+                 ("BOTTOMPADDING",(0,0),(-1,-1),5),
+                 ("LEFTPADDING",(0,0),(-1,-1),7),
+                 ("RIGHTPADDING",(-1,0),(-1,-1),7),
+                 ("VALIGN",(0,0),(-1,-1),"TOP"),
+                 ("LINEBELOW",(0,0),(-1,-2),0.3,NAVY_MID)],
+            ))
+            story.append(Spacer(1, 4*mm))
+
+        # AI Recommendations
+        if recs:
+            story.append(Paragraph("AI SEO Recommendations", st["h3"]))
+            story.append(Spacer(1, 2*mm))
+            story.append(_styled_table(
+                [[Paragraph(str(r["priority"]),
+                            S("rn",fontSize=11,textColor=ORANGE,
+                              fontName="Helvetica-Bold",alignment=TA_CENTER)),
+                  Paragraph(f"<b>{r['title']}</b><br/>"
+                            f"<font color='#A0AEC0'>{r['problem']}</font>",
+                            S("rb",fontSize=8,textColor=WHITE,
+                              fontName="Helvetica",leading=13)),
+                  Paragraph(f"→ {r['fix']}",
+                            S("rf",fontSize=8,textColor=GRAY,
+                              fontName="Helvetica",leading=12)),
+                  Paragraph(r.get("impact",""),
+                            S("ri",fontSize=8,
+                              textColor=RED if r.get("impact")=="High"
+                                        else YELLOW if r.get("impact")=="Medium"
+                                        else GREEN,
+                              fontName="Helvetica-Bold",alignment=TA_CENTER))]
+                 for r in recs[:3]],
+                [CW*0.05, CW*0.37, CW*0.47, CW*0.11],
+                [("ROWBACKGROUNDS",(0,0),(-1,-1),[NAVY_LIGHT, NAVY_MID]),
+                 ("TOPPADDING",(0,0),(-1,-1),7),
+                 ("BOTTOMPADDING",(0,0),(-1,-1),7),
+                 ("LEFTPADDING",(0,0),(-1,-1),8),
+                 ("RIGHTPADDING",(-1,0),(-1,-1),8),
+                 ("VALIGN",(0,0),(-1,-1),"TOP")],
+            ))
+            story.append(Spacer(1, 3*mm))
+
+    # ── COMPETITOR ANALYSIS ───────────────────────────────────────────────────
+    if competitor_data and competitor_data.get("competitors"):
+        story.append(Spacer(1, 2*mm))
+        story.extend(_section("COMPETITOR ANALYSIS", st))
+
+        target      = competitor_data.get("target", {})
+        competitors = competitor_data.get("competitors", [])[:4]
+        gaps        = competitor_data.get("gaps", [])
+        ai_summ     = competitor_data.get("ai_summary","")
+
+        if ai_summ:
+            story.append(Paragraph(ai_summ, st["body"]))
+            story.append(Spacer(1, 3*mm))
+
+        # Matrix header
+        header_row = [Paragraph("", st["small"]),
+                      Paragraph("<b>YOU</b>",
+                                S("you",fontSize=8,textColor=ORANGE,
+                                  fontName="Helvetica-Bold",alignment=TA_CENTER))]
+        for c in competitors:
+            header_row.append(Paragraph(
+                c["name"][:16]+("…" if len(c["name"])>16 else ""),
+                S("ch",fontSize=7,textColor=GRAY,fontName="Helvetica",alignment=TA_CENTER)
+            ))
+        while len(header_row) < 6:
+            header_row.append(Paragraph("—",st["small"]))
+
+        rows = [header_row]
+
+        for label_str, key, is_bool in [
+            ("⭐ Rating","rating",False),
+            ("💬 Reviews","review_count",False),
+            ("🌐 Website","has_website",True),
+            ("📸 Photos","photos_count",False),
+            ("✅ Profile %","profile_completeness",False),
+        ]:
+            target_val = target.get(key, 0)
+            row = [Paragraph(label_str,
+                             S("dl",fontSize=8,textColor=GRAY,fontName="Helvetica"))]
+
+            avg = (sum(c.get(key,0) for c in competitors)/len(competitors)
+                   if competitors else 0)
+
+            if is_bool:
+                display = "Yes" if target_val else "No"
+                wins    = bool(target_val)
+            else:
+                display = str(target_val)
+                wins    = target_val >= avg
+
+            row.append(Paragraph(f"<b>{display}</b>",
+                                  S("yv",fontSize=9,
+                                    textColor=GREEN if wins else RED,
+                                    fontName="Helvetica-Bold",alignment=TA_CENTER)))
+
+            for comp in competitors:
+                val = comp.get(key,0)
+                if is_bool:
+                    disp   = "Yes" if val else "No"
+                    better = val and not wins
+                else:
+                    disp   = str(val)
+                    better = isinstance(val,(int,float)) and val > target_val
+                row.append(Paragraph(disp,
+                                     S("cv2",fontSize=8,
+                                       textColor=RED if better else GRAY_DIM,
+                                       fontName="Helvetica",alignment=TA_CENTER)))
+
+            while len(row) < 6:
+                row.append(Paragraph("—",st["small"]))
+            rows.append(row)
+
+        n_c   = min(len(competitors),4)
+        col_w = [CW*0.18, CW*0.12] + [CW*0.70/max(n_c,1)]*n_c
+        col_w = col_w[:2+n_c]
+
+        story.append(_styled_table(
+            rows, col_w,
+            [("BACKGROUND",(0,0),(-1,0),NAVY_MID),
+             ("ROWBACKGROUNDS",(0,1),(-1,-1),[NAVY_LIGHT,NAVY_MID]),
+             ("TOPPADDING",(0,0),(-1,-1),6),
+             ("BOTTOMPADDING",(0,0),(-1,-1),6),
+             ("LEFTPADDING",(0,0),(-1,-1),6),
+             ("RIGHTPADDING",(-1,0),(-1,-1),6),
+             ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+             ("LINEBELOW",(0,0),(-1,0),1,ORANGE)],
+        ))
+        story.append(Spacer(1, 3*mm))
+
+        # Gaps
+        if gaps:
+            story.append(Paragraph("Key Competitive Gaps", st["h3"]))
+            story.append(Spacer(1, 2*mm))
+            story.append(_styled_table(
+                [[Paragraph("🔴" if g["severity"]=="critical" else "🟡",
+                            S("gi",fontSize=9,fontName="Helvetica")),
+                  Paragraph(f"<b>{g['dimension']}</b><br/>{g['message']}",
+                            S("gm",fontSize=8,textColor=WHITE,fontName="Helvetica",leading=13)),
+                  Paragraph(g["action"],
+                            S("ga",fontSize=8,textColor=ORANGE_LT,
+                              fontName="Helvetica",leading=12))]
+                 for g in gaps[:3]],
+                [CW*0.04, CW*0.46, CW*0.50],
+                [("ROWBACKGROUNDS",(0,0),(-1,-1),[NAVY_LIGHT,NAVY_MID]),
+                 ("TOPPADDING",(0,0),(-1,-1),6),
+                 ("BOTTOMPADDING",(0,0),(-1,-1),6),
+                 ("LEFTPADDING",(0,0),(-1,-1),8),
+                 ("RIGHTPADDING",(-1,0),(-1,-1),8),
+                 ("VALIGN",(0,0),(-1,-1),"TOP")],
+            ))
+            story.append(Spacer(1, 3*mm))
+
+    # ── KEYWORD STRATEGY ──────────────────────────────────────────────────────
+    if keyword_data and keyword_data.get("missing_keywords"):
+        story.append(Spacer(1, 2*mm))
+        story.extend(_section("KEYWORD STRATEGY GAPS", st))
+
+        if keyword_data.get("ai_analysis"):
+            story.append(Paragraph(keyword_data["ai_analysis"], st["body"]))
+            story.append(Spacer(1, 3*mm))
+
+        if keyword_data.get("disclaimer"):
+            story.append(Paragraph(
+                keyword_data["disclaimer"],
+                S("disc",fontSize=7.5,textColor=YELLOW,
+                  fontName="Helvetica-Oblique",leading=11)
+            ))
+            story.append(Spacer(1, 3*mm))
+
+        missing = keyword_data.get("missing_keywords",[])[:8]
+        if missing:
+            story.append(_styled_table(
+                [[Paragraph(f"✗  {kw['keyword']}  — competitors targeting this",
+                            S("kwi",fontSize=8,textColor=RED,fontName="Helvetica",leading=13))]
+                 for kw in missing],
+                [CW],
+                [("ROWBACKGROUNDS",(0,0),(-1,-1),[NAVY_LIGHT,NAVY_MID]),
+                 ("TOPPADDING",(0,0),(-1,-1),5),
+                 ("BOTTOMPADDING",(0,0),(-1,-1),5),
+                 ("LEFTPADDING",(0,0),(-1,-1),10),
+                 ("RIGHTPADDING",(-1,0),(-1,-1),10)],
+            ))
+            story.append(Spacer(1, 3*mm))
+
+    # ── TOP PRIORITY FIXES ────────────────────────────────────────────────────
+    if fixes:
+        story.append(Spacer(1, 2*mm))
+        story.extend(_section("🎯  TOP PRIORITY FIXES", st))
+
+        story.append(_styled_table(
+            [[Paragraph(f"#{i+1}",
+                        S("fn",fontSize=12,textColor=ORANGE,
+                          fontName="Helvetica-Bold",alignment=TA_CENTER)),
+              Paragraph(f"<b>{f['check']}</b><br/>"
+                        f"<font color='#A0AEC0'>{f['fix']}</font>",
+                        S("ft",fontSize=8.5,textColor=WHITE,
+                          fontName="Helvetica",leading=13)),
+              Paragraph(f"<font color='#FF8C3A'><b>{f.get('service','')}</b></font>",
+                        S("fs",fontSize=8,textColor=ORANGE_LT,
+                          fontName="Helvetica",alignment=TA_RIGHT,leading=12))]
+             for i,f in enumerate(fixes[:5])],
+            [CW*0.06, CW*0.69, CW*0.25],
+            [("ROWBACKGROUNDS",(0,0),(-1,-1),[NAVY_LIGHT,NAVY_MID]),
+             ("TOPPADDING",(0,0),(-1,-1),9),
+             ("BOTTOMPADDING",(0,0),(-1,-1),9),
+             ("LEFTPADDING",(0,0),(-1,-1),9),
+             ("RIGHTPADDING",(-1,0),(-1,-1),9),
+             ("VALIGN",(0,0),(-1,-1),"TOP"),
+             ("LINEABOVE",(0,0),(-1,0),1.5,ORANGE)],
+        ))
+        story.append(Spacer(1, 5*mm))
 
     # ── AI INSIGHT + CTA ──────────────────────────────────────────────────────
-    cta_data = [[
-        Paragraph(
-            f"<b>{ai_insights.get('insight', '')}</b><br/><br/>"
-            f"<font color='#FF6B00'>{ai_insights.get('cta', '')}</font>",
-            style("CTAText", fontSize=10, textColor=WHITE,
-                  fontName="Helvetica", leading=16)
-        )
-    ]]
-    cta_table = Table(cta_data, colWidths=[content_width])
-    cta_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), NAVY_LIGHT),
-        ("TOPPADDING", (0, 0), (-1, -1), 12),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-        ("LEFTPADDING", (0, 0), (-1, -1), 14),
-        ("RIGHTPADDING", (-1, 0), (-1, -1), 14),
-        ("LINEABOVE", (0, 0), (-1, 0), 2, ORANGE),
-        ("ROUNDEDCORNERS", [4, 4, 4, 4]),
-    ]))
-    story.append(cta_table)
-    story.append(Spacer(1, 4 * mm))
+    cta_t = _styled_table(
+        [[Paragraph(
+            f"<b>{ai_insights.get('insight','')}</b><br/><br/>"
+            f"<font color='#FF8C3A'>{ai_insights.get('cta','')}</font>",
+            S("cta",fontSize=9.5,textColor=WHITE,fontName="Helvetica",leading=15)
+        )]],
+        [CW],
+        [("BACKGROUND",(0,0),(-1,-1),NAVY_LIGHT),
+         ("TOPPADDING",(0,0),(-1,-1),14),
+         ("BOTTOMPADDING",(0,0),(-1,-1),14),
+         ("LEFTPADDING",(0,0),(-1,-1),16),
+         ("RIGHTPADDING",(-1,0),(-1,-1),16),
+         ("LINEABOVE",(0,0),(-1,0),2,ORANGE),
+         ("LINEBELOW",(0,0),(-1,-1),2,ORANGE)],
+    )
+    story.append(cta_t)
+    story.append(Spacer(1, 5*mm))
 
     # ── FOOTER ────────────────────────────────────────────────────────────────
-    footer_data = [[
-        Paragraph("📞 +91 8589999362", small),
-        Paragraph("✉️  Info@realsdigitalinnovations.com", small),
-        Paragraph("🌐 realsdigitalinnovations.com", small),
-        Paragraph("📍 Kannur, Kerala", small),
-    ]]
-    footer_table = Table(footer_data,
-                         colWidths=[content_width / 4] * 4)
-    footer_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), NAVY),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-    ]))
-    story.append(footer_table)
-
-    # Build PDF
-    def _bg(canvas, doc):
-        canvas.saveState()
-        canvas.setFillColor(NAVY)
-        canvas.rect(0, 0, W, H, fill=1, stroke=0)
-        canvas.restoreState()
+    story.append(_styled_table(
+        [[Paragraph("📞 +91 8589999362",st["small"]),
+          Paragraph("✉️  Info@realsdigitalinnovations.com",st["small"]),
+          Paragraph("🌐 realsdigitalinnovations.com",st["small"]),
+          Paragraph("📍 Kannur, Kerala, India",st["small"])]],
+        [CW/4]*4,
+        [("BACKGROUND",(0,0),(-1,-1),NAVY_MID),
+         ("TOPPADDING",(0,0),(-1,-1),7),
+         ("BOTTOMPADDING",(0,0),(-1,-1),7),
+         ("ALIGN",(0,0),(-1,-1),"CENTER"),
+         ("VALIGN",(0,0),(-1,-1),"MIDDLE")],
+    ))
 
     doc.build(story, onFirstPage=_bg, onLaterPages=_bg)
-    return buffer.getvalue()
+    return buf.getvalue()

@@ -52,6 +52,14 @@ async def check_social_presence(
         result["linkedin"] = True
         result["manual_verified"].append("linkedin")
 
+    if manual_socials.get("youtube_url", "").strip():
+        result["youtube"] = True
+        result["manual_verified"].append("youtube")
+
+    if manual_socials.get("twitter_url", "").strip():
+        result["twitter"] = True
+        result["manual_verified"].append("twitter")
+
     # ── 2. WhatsApp from phone number (Indian mobile) ─────────────────────────
     phone = google_data.get("phone", "")
     if phone:
