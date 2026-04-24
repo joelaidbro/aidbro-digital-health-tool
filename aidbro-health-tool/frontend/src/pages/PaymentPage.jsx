@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../context/AuthContext"
 
-const API = "http://localhost:8000/api"
+import { API } from "../config/api"
 
 export default function PaymentPage({ onSuccess }) {
   const { user, authFetch, markPaid } = useAuth()

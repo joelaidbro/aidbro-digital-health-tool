@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-const API = "http://localhost:8000/api"
+import { API } from "../../src/config/api"
 
 export default function LeadsTable({
   token,

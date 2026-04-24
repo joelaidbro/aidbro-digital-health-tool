@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 import { fileURLToPath } from 'url'
@@ -39,21 +39,46 @@ function routeRewritePlugin() {
   }
 }
 
-export default defineConfig({
-  appType: 'mpa',
-  plugins: [react(), routeRewritePlugin()],
-  build: {
-    rollupOptions: {
-      input: {
-        main: resolve(rootDir, 'index.html'),
-        auth: resolve(rootDir, 'auth/index.html'),
-        authCallback: resolve(rootDir, 'auth/callback/index.html'),
-        login: resolve(rootDir, 'login/index.html'),
-        register: resolve(rootDir, 'register/index.html'),
-        upgrade: resolve(rootDir, 'upgrade/index.html'),
-        portal: resolve(rootDir, 'portal/index.html'),
-        admin: resolve(rootDir, 'admin.html'),
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, rootDir, '')
+  const backendProxyTarget = env.VITE_BACKEND_DEV_PROXY_TARGET || 'http://localhost:8000'
+  const proxy = {
+    '/api': {
+      target: backendProxyTarget,
+      changeOrigin: true,
+    },
+    '/docs': {
+      target: backendProxyTarget,
+      changeOrigin: true,
+    },
+    '/openapi.json': {
+      target: backendProxyTarget,
+      changeOrigin: true,
+    },
+  }
+
+  return {
+    appType: 'mpa',
+    plugins: [react(), routeRewritePlugin()],
+    server: {
+      proxy,
+    },
+    preview: {
+      proxy,
+    },
+    build: {
+      rollupOptions: {
+        input: {
+          main: resolve(rootDir, 'index.html'),
+          auth: resolve(rootDir, 'auth/index.html'),
+          authCallback: resolve(rootDir, 'auth/callback/index.html'),
+          login: resolve(rootDir, 'login/index.html'),
+          register: resolve(rootDir, 'register/index.html'),
+          upgrade: resolve(rootDir, 'upgrade/index.html'),
+          portal: resolve(rootDir, 'portal/index.html'),
+          admin: resolve(rootDir, 'admin.html'),
+        },
       },
     },
-  },
+  }
 })

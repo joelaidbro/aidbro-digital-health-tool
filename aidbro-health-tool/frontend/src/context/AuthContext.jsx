@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react"
-
-const API = "http://localhost:8000/api"
+import { API } from "../config/api"
 
 const AuthContext = createContext(null)
 

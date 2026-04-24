@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 
-const API = "http://localhost:8000/api"
+import { API } from "../config/api"
 
 export default function ContactCapture({ leadId, businessName, score }) {
   const [visible, setVisible]   = useState(false)

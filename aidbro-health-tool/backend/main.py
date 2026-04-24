@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +10,24 @@ from routes.admin   import router as admin_router
 from routes.payment import router as payment_router
 from routes.portal  import router as portal_router
 from database.connection import create_tables, test_connection
+
+
+def _load_allowed_origins() -> list[str]:
+    configured = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
+    if configured:
+        return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+    defaults = [
+        os.getenv("FRONTEND_URL", "http://localhost:5173"),
+        os.getenv("ADMIN_URL", "http://localhost:5174"),
+        "http://localhost:3000",
+    ]
+    seen: list[str] = []
+    for origin in defaults:
+        cleaned = origin.strip().rstrip("/")
+        if cleaned and cleaned not in seen:
+            seen.append(cleaned)
+    return seen
 
 
 @asynccontextmanager
@@ -32,11 +51,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:3000",
-    ],
+    allow_origins=_load_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

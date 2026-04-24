@@ -8,7 +8,7 @@ import PillarChart from "./PillarChart"
 import { useAuditPrice } from "./useAuditPrice"
 import { useAuth } from "../context/AuthContext"
 
-const API = "http://localhost:8000/api"
+import { API } from "../config/api"
 const C = { green: "var(--green)", yellow: "var(--yellow)", red: "var(--red)" }
 const pc = color => C[color] || "var(--gray)"
 

@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext"
 import SeoReport from "../components/SeoReport"
 import PillarChart from "../components/PillarChart"
 
-const API = "http://localhost:8000/api"
+import { API } from "../config/api"
 
 const STEP_ICON = {
   complete: "OK",

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 
-const API = "http://localhost:8000/api"
+import { API } from "../config/api"
 
 // Cache price in memory to avoid repeated fetches
 let cachedPrice = null

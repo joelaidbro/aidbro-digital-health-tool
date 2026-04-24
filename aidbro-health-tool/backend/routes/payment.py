@@ -27,6 +27,7 @@ router = APIRouter()
 # ── Razorpay config ───────────────────────────────────────────────────────────
 RAZORPAY_KEY_ID     = os.getenv("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "")
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", RAZORPAY_KEY_SECRET)
 AUDIT_PRICE_INR     = int(os.getenv("AUDIT_PRICE_INR", "2000"))   # in rupees
 AUDIT_PRICE_PAISE   = AUDIT_PRICE_INR * 100                        # Razorpay uses paise
 PORTAL_ACCESS_DAYS  = int(os.getenv("PORTAL_ACCESS_DAYS", "90"))
@@ -279,9 +280,9 @@ async def payment_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     signature = request.headers.get("X-Razorpay-Signature", "")
 
     # Verify webhook signature
-    if RAZORPAY_KEY_SECRET:
+    if RAZORPAY_WEBHOOK_SECRET:
         expected = hmac.new(
-            RAZORPAY_KEY_SECRET.encode(), body, hashlib.sha256
+            RAZORPAY_WEBHOOK_SECRET.encode(), body, hashlib.sha256
         ).hexdigest()
         if not hmac.compare_digest(expected, signature):
             raise HTTPException(400, "Invalid webhook signature")

@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-const API = "http://localhost:8000/api"
+import { API } from "../config/api"
 
 const PLATFORMS = [
   { key: "instagram", label: "Instagram",  icon: "📸", placeholder: "https://instagram.com/yourbusiness",  color: "#E1306C" },

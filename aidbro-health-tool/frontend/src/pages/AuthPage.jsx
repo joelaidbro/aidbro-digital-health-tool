@@ -1,9 +1,7 @@
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { useAuditPrice } from "../components/useAuditPrice"
-
-const API        = "http://localhost:8000/api"
-const GOOGLE_URL = `${API}/auth/google`
+import { GOOGLE_AUTH_URL } from "../config/api"
 
 export default function AuthPage({ onSuccess, initialMode = "login" }) {
   const { register, login } = useAuth()
@@ -48,7 +46,7 @@ export default function AuthPage({ onSuccess, initialMode = "login" }) {
         </p>
 
         {/* Google OAuth button */}
-        <a href={GOOGLE_URL} className="btn-google">
+        <a href={GOOGLE_AUTH_URL} className="btn-google">
           <svg width="18" height="18" viewBox="0 0 48 48">
             <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.7 0 6.8 5.4 2.9 13.3l7.8 6.1C12.6 13 17.9 9.5 24 9.5z"/>
             <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.9-9.9 7.1-17z"/>

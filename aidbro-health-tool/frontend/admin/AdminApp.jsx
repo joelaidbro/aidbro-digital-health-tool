@@ -10,8 +10,7 @@ import AuditQueue from "./pages/AuditQueue"
 import AuditEditor from "./pages/AuditEditor"
 import Analytics from "./pages/Analytics"
 import TeamManagement from "./pages/TeamManagement"
-
-const API = "http://localhost:8000/api"
+import { API } from "../src/config/api"
 const TOKEN_KEY = "aidbro_admin_token"
 const USER_KEY = "aidbro_admin_user"
 

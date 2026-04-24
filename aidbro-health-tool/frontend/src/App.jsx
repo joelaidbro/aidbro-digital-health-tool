@@ -7,8 +7,7 @@ import AuthPage from "./pages/AuthPage"
 import AuthCallbackPage from "./pages/AuthCallbackPage"
 import PaymentPage from "./pages/PaymentPage"
 import ClientPortal from "./pages/ClientPortal"
-
-const API = "http://localhost:8000/api"
+import { API } from "./config/api"
 
 function InnerApp() {
   const { isAuthenticated, isPaid, loading } = useAuth()
