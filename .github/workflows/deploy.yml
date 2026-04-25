@@ -1,0 +1,90 @@
+name: Deploy Aidbro
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: aidbro-health-tool/frontend/package-lock.json
+
+      - name: Frontend build check
+        working-directory: aidbro-health-tool/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Backend syntax check
+        working-directory: aidbro-health-tool/backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python - <<'PY'
+import ast
+from pathlib import Path
+for path in Path(".").rglob("*.py"):
+    if "venv" in path.parts or "__pycache__" in path.parts:
+        continue
+    ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+print("Python source parse passed")
+PY
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script_stop: true
+          script: |
+            set -e
+
+            REPO_ROOT="/home/ai.aidbro.com/repositories/aidbro-digital-health-tool"
+            PROJECT_ROOT="$REPO_ROOT/aidbro-health-tool"
+            BACKEND_DIR="$PROJECT_ROOT/backend"
+            FRONTEND_DIR="$PROJECT_ROOT/frontend"
+            SITE_ROOT="/home/yourdomain.com/public_html"
+
+            cd "$REPO_ROOT"
+            git fetch origin main
+            git reset --hard origin/main
+
+            cd "$BACKEND_DIR"
+            if [ ! -d ".venv" ]; then
+              python3.11 -m venv .venv
+            fi
+            source .venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+            python - <<'PY'
+import asyncio
+from database.connection import create_tables
+asyncio.run(create_tables())
+PY
+
+            cd "$FRONTEND_DIR"
+            npm ci
+            npm run build
+            rsync -av --delete dist/ "$SITE_ROOT/"
+
+            systemctl restart aidbro-backend
+
