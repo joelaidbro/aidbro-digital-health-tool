@@ -177,7 +177,7 @@ export default function SearchForm({ onSearch }) {
           <p className="fade-up-d2">
             Enter your business details and get an AI-powered Digital Health Score —
             a full audit of your Google listing, website, social media, and reputation
-            vs. local competitors. Works for any business across India.
+            vs. local competitors. Works for any business across world.
           </p>
 
           <div className="hero-returning-actions fade-up-d2">
@@ -217,6 +217,9 @@ export default function SearchForm({ onSearch }) {
                     }}
                     autoFocus
                   />
+                  <span className="field-help">
+                    Enter the business name as accurately as possible for better Google profile matching.
+                  </span>
                   {errors.businessName && (
                     <span className="field-error">{errors.businessName}</span>
                   )}

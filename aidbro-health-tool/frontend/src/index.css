@@ -221,6 +221,11 @@ h1, h2, h3, h4 { font-family: var(--font-head); }
   border-color: var(--orange);
   box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
 }
+.field-help {
+  color: var(--gray);
+  font-size: 12px;
+  line-height: 1.45;
+}
 
 .form-submit {
   display: flex; justify-content: center; margin-top: 8px;
