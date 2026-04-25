@@ -64,7 +64,7 @@ jobs:
             PROJECT_ROOT="$REPO_ROOT/aidbro-health-tool"
             BACKEND_DIR="$PROJECT_ROOT/backend"
             FRONTEND_DIR="$PROJECT_ROOT/frontend"
-            SITE_ROOT="/home/yourdomain.com/public_html"
+            SITE_ROOT="/home/ai.aidbro.com/public_html"
 
             cd "$REPO_ROOT"
             git fetch origin main
@@ -78,11 +78,7 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
 
-            python << 'PY'
-            import asyncio
-            from database.connection import create_tables
-            asyncio.run(create_tables())
-            PY
+            python -c "import asyncio; from database.connection import create_tables; asyncio.run(create_tables())"
 
             cd "$FRONTEND_DIR"
             npm ci
