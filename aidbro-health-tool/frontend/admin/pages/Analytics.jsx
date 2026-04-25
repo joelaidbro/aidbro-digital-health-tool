@@ -108,6 +108,7 @@ export default function Analytics({ token, refreshKey, onUnauthorized }) {
         <MetricCard label="Conversion Rate" value={`${metrics.conversion_rate || 0}%`} hint="Search to paid" />
         <MetricCard label="Audits Today" value={metrics.audits_today || 0} hint="Paid audits today" />
         <MetricCard label="Revenue This Month" value={`Rs ${(metrics.revenue_month || 0).toLocaleString("en-IN")}`} hint="Captured payments" />
+        <MetricCard label="High Usage Alerts" value={metrics.high_activity_alerts || 0} hint={`IPs/accounts over ${data?.alert_threshold || 0} searches in ${data?.alert_window_hours || 24}h`} />
       </div>
 
       <div className="admin-grid admin-grid-two">
@@ -122,6 +123,11 @@ export default function Analytics({ token, refreshKey, onUnauthorized }) {
 
       <div className="admin-grid admin-grid-two">
         <BarChart title="Average Score by Category" rows={data?.score_by_category || []} labelKey="category" valueKey="avg_score" color="var(--yellow)" />
+      </div>
+
+      <div className="admin-grid admin-grid-two">
+        <BarChart title="High Activity by IP" rows={data?.ip_alerts || []} labelKey="label" valueKey="count" color="var(--red)" />
+        <BarChart title="High Activity by Account" rows={data?.account_alerts || []} labelKey="label" valueKey="count" color="var(--red)" />
       </div>
     </div>
   )

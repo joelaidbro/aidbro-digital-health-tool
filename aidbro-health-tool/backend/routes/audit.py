@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
@@ -22,6 +23,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from utils.auth_utils import decode_token
 
 router = APIRouter()
+
+ANONYMOUS_AUDIT_LIMIT = 2
+ANONYMOUS_AUDIT_WINDOW_DAYS = 7
 
 
 async def _get_request_user(db: AsyncSession, request: Request):
@@ -63,6 +67,24 @@ async def run_audit(
         raise HTTPException(400, "Location is required")
 
     user = await _get_request_user(db, request)
+    requester_ip = request.client.host if request.client else None
+
+    if not user and requester_ip:
+        window_start = datetime.now(timezone.utc) - timedelta(days=ANONYMOUS_AUDIT_WINDOW_DAYS)
+        recent_count = await crud.count_recent_searches_by_ip(
+            db,
+            requester_ip,
+            window_start,
+            anonymous_only=True,
+        )
+        if recent_count >= ANONYMOUS_AUDIT_LIMIT:
+            raise HTTPException(
+                429,
+                (
+                    f"You have used the {ANONYMOUS_AUDIT_LIMIT} free audit tries available without login "
+                    f"in the last {ANONYMOUS_AUDIT_WINDOW_DAYS} days. Please log in to continue."
+                ),
+            )
 
     # ── Step 1: Google Business data ──────────────────────────────────────────
     google_data = await search_business(req.business_name, req.location)
@@ -173,7 +195,7 @@ async def run_audit(
             "score_label":   score_data.get("label"),
             "is_mocked":     google_data.get("mocked", False),
             "audit_json":    full_result,
-            "ip_address":    request.client.host if request.client else None,
+            "ip_address":    requester_ip,
             "user_agent":    request.headers.get("user-agent"),
             "utm_source":    request.query_params.get("utm_source"),
             "utm_medium":    request.query_params.get("utm_medium"),
@@ -202,7 +224,7 @@ async def run_audit(
             "source_type":   "user" if user else "anonymous",
             "status":        "new",
             "audit_json":    full_result,
-            "ip_address":    request.client.host if request.client else None,
+            "ip_address":    requester_ip,
             "user_agent":    request.headers.get("user-agent"),
             "utm_source":    request.query_params.get("utm_source"),
             "utm_medium":    request.query_params.get("utm_medium"),

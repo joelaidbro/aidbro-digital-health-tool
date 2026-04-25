@@ -13,20 +13,22 @@ function InnerApp() {
   const { isAuthenticated, isPaid, loading } = useAuth()
   const path = window.location.pathname.replace(/\/+$/, "") || "/"
 
-  // ── CRITICAL: Never redirect while auth state is still loading ────────────
-  // This was causing the OAuth infinite loop.
   if (loading) {
     return (
-      <div className="app-root" style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
-        minHeight: "100vh"
-      }}>
+      <div
+        className="app-root"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+        }}
+      >
         <div className="loading-orb" />
       </div>
     )
   }
 
-  // ── Google OAuth callback ─────────────────────────────────────────────────
   if (path === "/auth/callback") {
     return (
       <AuthCallbackPage
@@ -39,18 +41,17 @@ function InnerApp() {
     )
   }
 
-  // ── Auth page ─────────────────────────────────────────────────────────────
   if (path === "/auth" || path === "/login" || path === "/register") {
-    // Only redirect if we're SURE user is authenticated (loading is done)
-    if (!loading && isAuthenticated) {
-      const next = "/portal"
-      window.history.replaceState({}, "", next)
+    if (isAuthenticated) {
+      window.history.replaceState({}, "", "/portal")
       window.location.reload()
       return null
     }
+
     return (
       <div className="app-root">
-        <div className="bg-grid" /><div className="bg-glow" />
+        <div className="bg-grid" />
+        <div className="bg-glow" />
         <AuthPage
           initialMode={path === "/register" ? "register" : "login"}
           onSuccess={() => {
@@ -62,21 +63,22 @@ function InnerApp() {
     )
   }
 
-  // ── Payment / upgrade page ────────────────────────────────────────────────
   if (path === "/upgrade") {
-    if (!loading && !isAuthenticated) {
+    if (!isAuthenticated) {
       window.history.replaceState({}, "", "/auth")
       window.location.reload()
       return null
     }
-    if (!loading && isPaid) {
+    if (isPaid) {
       window.history.replaceState({}, "", "/portal")
       window.location.reload()
       return null
     }
+
     return (
       <div className="app-root">
-        <div className="bg-grid" /><div className="bg-glow" />
+        <div className="bg-grid" />
+        <div className="bg-glow" />
         <PaymentPage
           onSuccess={() => {
             window.history.replaceState({}, "", "/portal")
@@ -87,16 +89,17 @@ function InnerApp() {
     )
   }
 
-  // ── Client portal ─────────────────────────────────────────────────────────
   if (path === "/portal") {
-    if (!loading && !isAuthenticated) {
+    if (!isAuthenticated) {
       window.history.replaceState({}, "", "/auth")
       window.location.reload()
       return null
     }
+
     return (
       <div className="app-root">
-        <div className="bg-grid" /><div className="bg-glow" />
+        <div className="bg-grid" />
+        <div className="bg-glow" />
         <ClientPortal
           onLogout={() => {
             window.history.replaceState({}, "", "/")
@@ -107,43 +110,55 @@ function InnerApp() {
     )
   }
 
-  // ── Default: Free audit tool ──────────────────────────────────────────────
   return <FreeAuditApp />
 }
 
-
 function FreeAuditApp() {
-  const { token } = useAuth()
-  const [state, setState]     = useState("idle")
+  const { token, isAuthenticated } = useAuth()
+  const [state, setState] = useState("idle")
   const [results, setResults] = useState(null)
-  const [leadId, setLeadId]   = useState(null)
+  const [leadId, setLeadId] = useState(null)
   const [searchId, setSearchId] = useState(null)
-  const [error, setError]     = useState("")
+  const [error, setError] = useState("")
+  const [limitBlocked, setLimitBlocked] = useState(false)
 
   const handleSearch = async ({
-    businessName, location, category,
-    websiteUrl, instagramUrl, facebookUrl, linkedinUrl,
+    businessName,
+    location,
+    category,
+    websiteUrl,
+    instagramUrl,
+    facebookUrl,
+    linkedinUrl,
   }) => {
     setState("loading")
     setError("")
+    setLimitBlocked(false)
+
     try {
       const res = await fetch(`${API}/audit`, {
-        method:  "POST",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
+          Authorization: token ? `Bearer ${token}` : "",
         },
-        body:    JSON.stringify({
+        body: JSON.stringify({
           business_name: businessName,
-          location, category,
-          website_url:   websiteUrl   || "",
+          location,
+          category,
+          website_url: websiteUrl || "",
           instagram_url: instagramUrl || "",
-          facebook_url:  facebookUrl  || "",
-          linkedin_url:  linkedinUrl  || "",
+          facebook_url: facebookUrl || "",
+          linkedin_url: linkedinUrl || "",
         }),
       })
-      if (!res.ok) throw new Error("Audit failed. Please try again.")
-      const data = await res.json()
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setLimitBlocked(res.status === 429)
+        throw new Error(data.detail || "Audit failed. Please try again.")
+      }
+
       setLeadId(data.lead_id || null)
       setSearchId(data.search_id || null)
       if (data.search_id) {
@@ -159,13 +174,19 @@ function FreeAuditApp() {
 
   const handleReset = () => {
     sessionStorage.removeItem("aidbro_active_search_id")
-    setState("idle"); setResults(null); setLeadId(null); setSearchId(null); setError("")
+    setState("idle")
+    setResults(null)
+    setLeadId(null)
+    setSearchId(null)
+    setError("")
+    setLimitBlocked(false)
   }
 
   return (
     <div className="app-root">
-      <div className="bg-grid" /><div className="bg-glow" />
-      {state === "idle"    && <SearchForm onSearch={handleSearch} />}
+      <div className="bg-grid" />
+      <div className="bg-glow" />
+      {state === "idle" && <SearchForm onSearch={handleSearch} />}
       {state === "loading" && <LoadingScreen />}
       {state === "results" && results && (
         <ResultsDashboard data={results} leadId={leadId} searchId={searchId} onReset={handleReset} />
@@ -173,17 +194,21 @@ function FreeAuditApp() {
       {state === "error" && (
         <div className="error-screen">
           <div className="error-card">
-            <span className="error-icon">⚠️</span>
+            <span className="error-icon">!</span>
             <h2>Something went wrong</h2>
             <p>{error}</p>
-            <button className="btn-primary" onClick={handleReset}>← Try Again</button>
+            {limitBlocked && !isAuthenticated && (
+              <a href="/auth" className="btn-primary" style={{ marginBottom: 12 }}>
+                Login to Continue
+              </a>
+            )}
+            <button className="btn-primary" onClick={handleReset}>Try Again</button>
           </div>
         </div>
       )}
     </div>
   )
 }
-
 
 export default function App() {
   return (

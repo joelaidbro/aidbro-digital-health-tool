@@ -640,6 +640,84 @@ async def get_recent_searches_for_user(
     return list(result.scalars().all())
 
 
+async def count_recent_searches_by_ip(
+    db: AsyncSession,
+    ip_address: str,
+    since: datetime,
+    anonymous_only: bool = False,
+) -> int:
+    query = select(func.count(SearchRecord.id)).where(
+        SearchRecord.ip_address == ip_address,
+        SearchRecord.created_at >= since,
+    )
+    if anonymous_only:
+        query = query.where(SearchRecord.user_id.is_(None))
+    result = await db.execute(query)
+    return int(result.scalar_one() or 0)
+
+
+async def get_high_activity_ip_rows(
+    db: AsyncSession,
+    since: datetime,
+    threshold: int,
+    limit: int = 10,
+) -> list[dict]:
+    rows = (
+        await db.execute(
+            select(
+                SearchRecord.ip_address,
+                func.count(SearchRecord.id).label("search_count"),
+            )
+            .where(
+                SearchRecord.ip_address.isnot(None),
+                SearchRecord.created_at >= since,
+            )
+            .group_by(SearchRecord.ip_address)
+            .having(func.count(SearchRecord.id) >= threshold)
+            .order_by(desc(func.count(SearchRecord.id)))
+            .limit(limit)
+        )
+    ).all()
+    return [
+        {
+            "label": ip_address,
+            "count": int(search_count or 0),
+        }
+        for ip_address, search_count in rows
+        if ip_address
+    ]
+
+
+async def get_high_activity_user_rows(
+    db: AsyncSession,
+    since: datetime,
+    threshold: int,
+    limit: int = 10,
+) -> list[dict]:
+    rows = (
+        await db.execute(
+            select(
+                UserAccount.email,
+                func.count(SearchRecord.id).label("search_count"),
+            )
+            .join(SearchRecord, SearchRecord.user_id == UserAccount.id)
+            .where(SearchRecord.created_at >= since)
+            .group_by(UserAccount.email)
+            .having(func.count(SearchRecord.id) >= threshold)
+            .order_by(desc(func.count(SearchRecord.id)))
+            .limit(limit)
+        )
+    ).all()
+    return [
+        {
+            "label": email,
+            "count": int(search_count or 0),
+        }
+        for email, search_count in rows
+        if email
+    ]
+
+
 async def create_payment_order_record(
     db: AsyncSession,
     *,

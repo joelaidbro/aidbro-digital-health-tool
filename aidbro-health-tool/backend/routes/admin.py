@@ -43,6 +43,8 @@ AUDIT_SORT_ORDER = {
     "completed": 3,
     "delivered": 4,
 }
+ACTIVITY_ALERT_WINDOW_HOURS = 24
+ACTIVITY_ALERT_THRESHOLD = 8
 
 
 class LeadUpdateRequest(BaseModel):
@@ -274,6 +276,7 @@ async def admin_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = (today_start - timedelta(days=today_start.weekday()))
     month_start = today_start.replace(day=1)
+    activity_window_start = now - timedelta(hours=ACTIVITY_ALERT_WINDOW_HOURS)
 
     leads_total = (await db.execute(select(func.count(Lead.id)))).scalar_one()
     leads_contact = (
@@ -367,6 +370,18 @@ async def admin_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         {"label": "Anonymous", "count": anonymous_searches},
         {"label": "Logged In", "count": max(searches_total - anonymous_searches, 0)},
     ]
+    ip_alerts = await crud.get_high_activity_ip_rows(
+        db,
+        since=activity_window_start,
+        threshold=ACTIVITY_ALERT_THRESHOLD,
+        limit=6,
+    )
+    account_alerts = await crud.get_high_activity_user_rows(
+        db,
+        since=activity_window_start,
+        threshold=ACTIVITY_ALERT_THRESHOLD,
+        limit=6,
+    )
 
     return JSONResponse(
         content={
@@ -382,12 +397,17 @@ async def admin_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
                 "audits_week": audits_week,
                 "audits_month": audits_month,
                 "revenue_month": float(revenue_month or 0),
+                "high_activity_alerts": len(ip_alerts) + len(account_alerts),
             },
             "funnel": funnel,
             "audit_pipeline": audit_pipeline,
             "score_by_category": score_by_category,
             "score_distribution": score_distribution,
             "search_sources": search_sources,
+            "ip_alerts": ip_alerts,
+            "account_alerts": account_alerts,
+            "alert_window_hours": ACTIVITY_ALERT_WINDOW_HOURS,
+            "alert_threshold": ACTIVITY_ALERT_THRESHOLD,
         }
     )
 
