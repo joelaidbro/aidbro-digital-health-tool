@@ -36,15 +36,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python - <<'PY'
-import ast
-from pathlib import Path
-for path in Path(".").rglob("*.py"):
-    if "venv" in path.parts or "__pycache__" in path.parts:
-        continue
-    ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-print("Python source parse passed")
-PY
+
+          python << 'PY'
+          import ast
+          from pathlib import Path
+
+          for path in Path(".").rglob("*.py"):
+              if "venv" in path.parts or "__pycache__" in path.parts:
+                  continue
+              ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+
+          print("Python source parse passed")
+          PY
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -75,11 +78,11 @@ PY
             pip install --upgrade pip
             pip install -r requirements.txt
 
-            python - <<'PY'
-import asyncio
-from database.connection import create_tables
-asyncio.run(create_tables())
-PY
+            python << 'PY'
+            import asyncio
+            from database.connection import create_tables
+            asyncio.run(create_tables())
+            PY
 
             cd "$FRONTEND_DIR"
             npm ci
@@ -87,4 +90,3 @@ PY
             rsync -av --delete dist/ "$SITE_ROOT/"
 
             systemctl restart aidbro-backend
-
