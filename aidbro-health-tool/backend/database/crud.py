@@ -269,6 +269,35 @@ async def get_client_by_id(db: AsyncSession, client_id: int) -> Optional[AuditCl
     return result.scalar_one_or_none()
 
 
+async def create_shadow_audit_client(
+    db: AsyncSession,
+    *,
+    account_email: str,
+    password_hash: str,
+    lead_id: Optional[int] = None,
+    plan_type: str = "basic_audit",
+    search_id: Optional[int] = None,
+) -> AuditClient:
+    """Create a separate paid-audit container for an additional purchased search."""
+    local_part, _, domain_part = account_email.partition("@")
+    safe_domain = domain_part or "aidbro.local"
+    timestamp = int(datetime.now(timezone.utc).timestamp())
+    shadow_local = f"{local_part[:40]}+audit-{search_id or 'x'}-{timestamp}"
+    shadow_email = f"{shadow_local}@{safe_domain}"
+
+    client = AuditClient(
+        lead_id=lead_id,
+        email=shadow_email,
+        password_hash=password_hash,
+        plan_type=plan_type,
+        audit_status="unsubscribed",
+    )
+    db.add(client)
+    await db.flush()
+    await db.refresh(client)
+    return client
+
+
 async def update_audit_status(
     db: AsyncSession, client_id: int, status: str
 ) -> Optional[AuditClient]:
@@ -640,6 +669,34 @@ async def get_recent_searches_for_user(
     return list(result.scalars().all())
 
 
+async def get_recent_matching_search(
+    db: AsyncSession,
+    *,
+    business_name: str,
+    location: str,
+    category: Optional[str] = None,
+    website_url: Optional[str] = None,
+    since: datetime,
+) -> Optional[SearchRecord]:
+    query = (
+        select(SearchRecord)
+        .where(
+            func.lower(SearchRecord.business_name) == business_name.strip().lower(),
+            func.lower(SearchRecord.location) == location.strip().lower(),
+            SearchRecord.created_at >= since,
+        )
+        .order_by(desc(SearchRecord.created_at))
+        .limit(1)
+    )
+    if category:
+        query = query.where(SearchRecord.category == category)
+    if website_url:
+        query = query.where(SearchRecord.website_url == website_url)
+
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
 async def count_recent_searches_by_ip(
     db: AsyncSession,
     ip_address: str,
@@ -818,3 +875,21 @@ async def get_recent_audit_jobs_for_user(
         .limit(limit)
     )
     return list(result.scalars().all())
+
+
+async def get_latest_audit_job_for_search(
+    db: AsyncSession,
+    search_id: int,
+    user_id: Optional[int] = None,
+) -> Optional[AuditJob]:
+    query = (
+        select(AuditJob)
+        .where(AuditJob.search_id == search_id)
+        .order_by(desc(AuditJob.created_at))
+        .limit(1)
+    )
+    if user_id is not None:
+        query = query.where(AuditJob.user_id == user_id)
+
+    result = await db.execute(query)
+    return result.scalar_one_or_none()

@@ -6,6 +6,8 @@ GET  /api/portal/report       — Full report data when ready
 GET  /api/portal/report/pdf   — Download final PDF report
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +28,55 @@ def _require_paid_client(request: Request) -> str:
     if not payload or payload.get("role") != "client":
         raise HTTPException(401, "Client access required.")
     return payload.get("sub")
+
+
+async def _resolve_portal_audit_context(
+    db: AsyncSession,
+    *,
+    email: str,
+    search_id: Optional[int] = None,
+):
+    user = await crud.get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(404, "User account not found.")
+
+    if search_id is None:
+        client_obj = await crud.get_client_by_email(db, email)
+        if not client_obj:
+            raise HTTPException(404, "Account not found.")
+        detailed = await crud.get_detailed_audit_by_client(db, client_obj.id)
+        return {
+            "user": user,
+            "search": None,
+            "audit_job": None,
+            "client": client_obj,
+            "detailed": detailed,
+            "search_specific": False,
+        }
+
+    search = await crud.get_search_by_id(db, search_id)
+    if not search:
+        raise HTTPException(404, "Saved search not found.")
+    if search.user_id != user.id:
+        raise HTTPException(403, "You do not have access to this saved search.")
+
+    audit_job = await crud.get_latest_audit_job_for_search(db, search.id, user.id)
+    if not audit_job or not audit_job.legacy_client_id:
+        raise HTTPException(404, "No paid detailed audit found for this search.")
+
+    client_obj = await crud.get_client_by_id(db, audit_job.legacy_client_id)
+    if not client_obj or not client_obj.paid_at:
+        raise HTTPException(404, "Paid audit workspace not found for this search.")
+
+    detailed = await crud.get_detailed_audit_by_client(db, client_obj.id)
+    return {
+        "user": user,
+        "search": search,
+        "audit_job": audit_job,
+        "client": client_obj,
+        "detailed": detailed,
+        "search_specific": True,
+    }
 
 
 @router.get("/portal/history")
@@ -77,8 +128,13 @@ async def get_saved_search_detail(
     if search.user_id != user.id:
         raise HTTPException(403, "You do not have access to this saved search.")
 
+    linked_job = await crud.get_latest_audit_job_for_search(db, search.id, user.id)
+
     return JSONResponse(content={
-        "search": search.to_dict(),
+        "search": {
+            **search.to_dict(),
+            "linked_audit_job": linked_job.to_dict() if linked_job else None,
+        },
         "audit": search.audit_json or {},
     })
 
@@ -116,14 +172,14 @@ ALL_STEPS = [
 @router.get("/portal/status")
 async def get_portal_status(
     request: Request,
+    search_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Returns audit pipeline status with step indicators."""
     email = _require_paid_client(request)
-
-    client_obj = await crud.get_client_by_email(db, email)
-    if not client_obj:
-        raise HTTPException(404, "Account not found.")
+    context = await _resolve_portal_audit_context(db, email=email, search_id=search_id)
+    client_obj = context["client"]
+    search = context["search"]
 
     current_step_num = STATUS_STEPS.get(client_obj.audit_status or "unsubscribed", 0)
     has_paid         = client_obj.paid_at is not None
@@ -139,8 +195,7 @@ async def get_portal_status(
             state = "pending"
         steps_with_state.append({**s, "state": state})
 
-    # Fetch detailed audit if exists
-    detailed = await crud.get_detailed_audit_by_client(db, client_obj.id)
+    detailed = context["detailed"]
     report_ready = (
         detailed is not None
         and detailed.report_approved
@@ -148,6 +203,8 @@ async def get_portal_status(
 
     return JSONResponse(content={
         "has_paid":       has_paid,
+        "search_id":      search.id if search else None,
+        "search_name":    search.business_name if search else None,
         "audit_status":   client_obj.audit_status,
         "status_label":   STATUS_LABELS.get(client_obj.audit_status, ""),
         "steps":          steps_with_state,
@@ -165,6 +222,7 @@ async def get_portal_status(
 @router.get("/portal/report")
 async def get_report(
     request: Request,
+    search_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -172,10 +230,8 @@ async def get_report(
     Only accessible when audit_status is 'completed' or 'delivered'.
     """
     email = _require_paid_client(request)
-
-    client_obj = await crud.get_client_by_email(db, email)
-    if not client_obj:
-        raise HTTPException(404, "Account not found.")
+    context = await _resolve_portal_audit_context(db, email=email, search_id=search_id)
+    client_obj = context["client"]
     if not client_obj.paid_at:
         raise HTTPException(403, "Report access requires payment.")
     if client_obj.audit_status not in ("completed", "delivered"):
@@ -184,7 +240,7 @@ async def get_report(
             f"Report not ready yet. Current status: {client_obj.audit_status}"
         )
 
-    detailed = await crud.get_detailed_audit_by_client(db, client_obj.id)
+    detailed = context["detailed"]
     if not detailed or not detailed.report_approved:
         raise HTTPException(403, "Report is still being reviewed.")
 
@@ -213,21 +269,25 @@ async def get_report(
 @router.get("/portal/report/pdf")
 async def download_report_pdf(
     request: Request,
+    search_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Download the approved PDF report."""
     email = _require_paid_client(request)
-
-    client_obj = await crud.get_client_by_email(db, email)
+    context = await _resolve_portal_audit_context(db, email=email, search_id=search_id)
+    client_obj = context["client"]
+    detailed = context["detailed"]
+    search = context["search"]
     if not client_obj or not client_obj.paid_at:
         raise HTTPException(403, "Access denied.")
-
-    detailed = await crud.get_detailed_audit_by_client(db, client_obj.id)
     if not detailed or not detailed.report_approved or not detailed.report_pdf_path:
         raise HTTPException(404, "PDF report not available yet.")
 
     return FileResponse(
         detailed.report_pdf_path,
         media_type="application/pdf",
-        filename=f"aidbro_detailed_report.pdf",
+        filename=(
+            f"aidbro_detailed_report_{search.business_name.replace(' ', '_')}.pdf"
+            if search else "aidbro_detailed_report.pdf"
+        ),
     )

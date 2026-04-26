@@ -16,6 +16,7 @@ from database.models import (
     AuditJob,
     DetailedAudit,
     Lead,
+    PaymentOrder,
     SearchRecord,
     UserAccount,
     UserActivityLog,
@@ -157,18 +158,53 @@ def _build_local_seo_snapshot(lead_audit_json: dict) -> dict:
     }
 
 
+async def _get_latest_paid_search_for_client(
+    db: AsyncSession,
+    client: AuditClient,
+) -> Optional[SearchRecord]:
+    audit_job = (
+        await db.execute(
+            select(AuditJob)
+            .where(AuditJob.legacy_client_id == client.id, AuditJob.search_id.isnot(None))
+            .order_by(desc(AuditJob.created_at))
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if audit_job and audit_job.search_id:
+        return await crud.get_search_by_id(db, audit_job.search_id)
+
+    order = (
+        await db.execute(
+            select(PaymentOrder)
+            .where(PaymentOrder.legacy_client_id == client.id, PaymentOrder.search_id.isnot(None))
+            .order_by(desc(PaymentOrder.created_at))
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if order and order.search_id:
+        return await crud.get_search_by_id(db, order.search_id)
+
+    return None
+
+
 async def _ensure_audit_workspace(
     db: AsyncSession,
     client: AuditClient,
 ) -> tuple[Optional[Lead], DetailedAudit]:
     lead = await _match_lead_for_client(db, client)
+    paid_search = await _get_latest_paid_search_for_client(db, client)
 
     detailed = await crud.get_detailed_audit_by_client(db, client.id)
     if not detailed:
         detailed = await crud.create_detailed_audit(db, client.id)
 
-    lead_audit_json = lead.audit_json if lead and lead.audit_json else {}
-    should_seed = bool(lead_audit_json) and not any(
+    source_audit_json = {}
+    if lead and lead.audit_json:
+        source_audit_json = lead.audit_json
+    elif paid_search and paid_search.audit_json:
+        source_audit_json = paid_search.audit_json
+
+    should_seed = bool(source_audit_json) and not any(
         [
             detailed.basic_audit_json,
             detailed.seo_crawler_json,
@@ -180,16 +216,16 @@ async def _ensure_audit_workspace(
 
     if should_seed:
         detailed.basic_audit_json = {
-            "business": lead_audit_json.get("business"),
-            "score": lead_audit_json.get("score"),
-            "pagespeed": lead_audit_json.get("pagespeed"),
-            "social": lead_audit_json.get("social"),
-            "insights": lead_audit_json.get("insights"),
+            "business": source_audit_json.get("business"),
+            "score": source_audit_json.get("score"),
+            "pagespeed": source_audit_json.get("pagespeed"),
+            "social": source_audit_json.get("social"),
+            "insights": source_audit_json.get("insights"),
         }
-        detailed.seo_crawler_json = lead_audit_json.get("seo")
-        detailed.competitors_json = lead_audit_json.get("competitors")
-        detailed.keywords_json = lead_audit_json.get("keywords")
-        detailed.local_seo_json = _build_local_seo_snapshot(lead_audit_json)
+        detailed.seo_crawler_json = source_audit_json.get("seo")
+        detailed.competitors_json = source_audit_json.get("competitors")
+        detailed.keywords_json = source_audit_json.get("keywords")
+        detailed.local_seo_json = _build_local_seo_snapshot(source_audit_json)
         detailed.updated_at = datetime.now(timezone.utc)
         await db.flush()
 
@@ -256,6 +292,25 @@ def _serialize_user_account(user: UserAccount) -> dict:
 
 def _serialize_audit_job(job: AuditJob) -> dict:
     return _json_safe(job.to_dict())
+
+
+def _search_as_lead_like(search: SearchRecord) -> dict:
+    return {
+        "id": None,
+        "business_name": search.business_name,
+        "location": search.location,
+        "category": search.category,
+        "website_url": search.website_url,
+        "contact_phone": search.auto_phone,
+        "contact_email": search.auto_email,
+        "total_score": search.total_score,
+        "grade": search.grade,
+        "score_label": search.score_label,
+        "status": search.status,
+        "audit_json": _json_safe(search.audit_json or {}),
+        "created_at": search.created_at.isoformat() if search.created_at else None,
+        "is_mocked": search.is_mocked,
+    }
 
 
 def _override_column_for_section(section: str) -> Optional[str]:
@@ -785,13 +840,14 @@ async def admin_audits(
             continue
 
         lead, detailed = await _ensure_audit_workspace(db, client)
+        paid_search = await _get_latest_paid_search_for_client(db, client)
         reference_time = client.paid_at or client.created_at or now
         open_days = max((now - reference_time).days, 0)
 
         rows.append(
             {
                 "client": _serialize_client(client),
-                "lead": _json_safe(lead.to_dict()) if lead else None,
+                "lead": _json_safe(lead.to_dict()) if lead else (_search_as_lead_like(paid_search) if paid_search else None),
                 "report_approved": detailed.report_approved,
                 "last_edited_at": detailed.last_edited_at.isoformat() if detailed.last_edited_at else None,
                 "open_days": open_days,
@@ -821,11 +877,12 @@ async def admin_audit_detail(
         raise HTTPException(404, "Paid audit client not found.")
 
     lead, detailed = await _ensure_audit_workspace(db, client)
+    paid_search = await _get_latest_paid_search_for_client(db, client)
 
     return JSONResponse(
         content={
             "client": _serialize_client(client),
-            "lead": _json_safe({**lead.to_dict(), "audit_json": lead.audit_json}) if lead else None,
+            "lead": _json_safe({**lead.to_dict(), "audit_json": lead.audit_json}) if lead else (_search_as_lead_like(paid_search) if paid_search else None),
             "detailed_audit": _serialize_detailed_audit(detailed),
         }
     )

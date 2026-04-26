@@ -97,6 +97,7 @@ function SearchHistoryCard({
   loading,
   onViewSnapshot,
   onUpgrade,
+  onOpenAudit,
 }) {
   const linkedJob = search.linked_audit_job
 
@@ -170,7 +171,11 @@ function SearchHistoryCard({
         <button className="btn-secondary" onClick={() => onViewSnapshot(search.id)}>
           {loading ? "Loading..." : "View Saved Result"}
         </button>
-        {!linkedJob && (
+        {linkedJob ? (
+          <button className="btn-primary" onClick={() => onOpenAudit(search)}>
+            Open Audit Status
+          </button>
+        ) : (
           <button className="btn-primary" onClick={() => onUpgrade(search)}>
             Start Detailed Audit
           </button>
@@ -180,7 +185,7 @@ function SearchHistoryCard({
   )
 }
 
-function SearchSnapshot({ snapshot, onUpgrade, onDownloadPdf, pdfLoading, isPaid }) {
+function SearchSnapshot({ snapshot, onUpgrade, onOpenAudit, onDownloadPdf, pdfLoading, hasLinkedAudit }) {
   const audit = snapshot?.audit || {}
   const score = audit.score || {}
   const business = audit.business || {}
@@ -213,6 +218,11 @@ function SearchSnapshot({ snapshot, onUpgrade, onDownloadPdf, pdfLoading, isPaid
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="demo-banner" style={{ marginBottom: 24, borderRadius: 12 }}>
+        This saved result keeps score consistency by reusing the latest captured snapshot for identical searches within 24 hours.
+        If your business details changed after this audit, run a fresh check after the cache window for updated live data.
       </div>
 
       {(business.website || business.phone || business.email) && (
@@ -432,9 +442,9 @@ function SearchSnapshot({ snapshot, onUpgrade, onDownloadPdf, pdfLoading, isPaid
 
       <div className="results-footer-cta">
         <div className="results-footer-cta-text">
-          <h3>{isPaid ? "Your saved result is ready to review" : "Need a full manual report for this search?"}</h3>
+          <h3>{hasLinkedAudit ? "Your saved result is ready to review" : "Need a full manual report for this search?"}</h3>
           <p>
-            {isPaid
+            {hasLinkedAudit
               ? "Download the free audit PDF here, or switch to Audit Status / My Report for your paid workflow."
               : "Select this saved audit and continue to the paid detailed audit flow."}
           </p>
@@ -443,7 +453,11 @@ function SearchSnapshot({ snapshot, onUpgrade, onDownloadPdf, pdfLoading, isPaid
           <button className="pdf-btn" onClick={() => onDownloadPdf(snapshot)} disabled={pdfLoading}>
             {pdfLoading ? "Generating PDF..." : "Download PDF"}
           </button>
-          {!isPaid && (
+          {hasLinkedAudit ? (
+            <button className="btn-primary" onClick={() => onOpenAudit(snapshot.search)}>
+              Open Audit Status
+            </button>
+          ) : (
             <button className="btn-primary" onClick={() => onUpgrade(snapshot.search)}>
               Upgrade This Search
             </button>
@@ -466,6 +480,10 @@ export default function ClientPortal({ onLogout }) {
   const [error, setError] = useState("")
   const [snapshot, setSnapshot] = useState(null)
   const [snapshotLoadingId, setSnapshotLoadingId] = useState(null)
+  const [selectedAuditSearchId, setSelectedAuditSearchId] = useState(() => {
+    const raw = sessionStorage.getItem("aidbro_active_search_id")
+    return raw ? Number(raw) : null
+  })
 
   const latestSearch = history.searches[0] || null
 
@@ -483,8 +501,13 @@ export default function ClientPortal({ onLogout }) {
     return data
   }
 
-  const fetchStatus = async () => {
-    const res = await authFetch(`${API}/portal/status`)
+  const fetchStatus = async (searchId = selectedAuditSearchId) => {
+    if (!searchId) {
+      setStatus(null)
+      return null
+    }
+    const suffix = searchId ? `?search_id=${searchId}` : ""
+    const res = await authFetch(`${API}/portal/status${suffix}`)
     if (res.status === 403 || res.status === 404) {
       setStatus(null)
       return null
@@ -502,8 +525,25 @@ export default function ClientPortal({ onLogout }) {
     setLoading(true)
     setError("")
     try {
-      const [, statusData] = await Promise.all([fetchHistory(), fetchStatus()])
-      if (statusData?.report_ready) {
+      const historyData = await fetchHistory()
+      const activeSearchId = Number(sessionStorage.getItem("aidbro_active_search_id") || "0")
+      const paidSearches = (historyData?.searches || []).filter((search) => search.linked_audit_job)
+      const activeSearch = paidSearches.find((search) => search.id === activeSearchId)
+      const fallbackSearch = paidSearches.length === 1 ? paidSearches[0] : null
+      const resolvedSearch = activeSearch || fallbackSearch
+
+      let statusData = null
+      if (resolvedSearch) {
+        setSelectedAuditSearchId(resolvedSearch.id)
+        statusData = await fetchStatus(resolvedSearch.id)
+      } else {
+        setSelectedAuditSearchId(null)
+        setStatus(null)
+      }
+
+      if (resolvedSearch) {
+        setTab("status")
+      } else if (statusData?.report_ready) {
         setTab("status")
       } else {
         setTab("history")
@@ -522,16 +562,17 @@ export default function ClientPortal({ onLogout }) {
   useEffect(() => {
     if (!status || !ACTIVE_AUDIT_STATES.has(status.audit_status)) return undefined
     const intervalId = setInterval(() => {
-      fetchStatus().catch(() => {})
+      fetchStatus(selectedAuditSearchId).catch(() => {})
     }, 60000)
     return () => clearInterval(intervalId)
-  }, [status])
+  }, [selectedAuditSearchId, status])
 
-  const fetchReport = async () => {
+  const fetchReport = async (searchId = selectedAuditSearchId) => {
     setReportLoading(true)
     setError("")
     try {
-      const res = await authFetch(`${API}/portal/report`)
+      const suffix = searchId ? `?search_id=${searchId}` : ""
+      const res = await authFetch(`${API}/portal/report${suffix}`)
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.detail || "Report not ready.")
@@ -554,7 +595,13 @@ export default function ClientPortal({ onLogout }) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.detail || "Could not load saved result.")
       }
-      setSnapshot(await res.json())
+      const payload = await res.json()
+      setSnapshot(payload)
+      if (payload.search?.linked_audit_job) {
+        sessionStorage.setItem("aidbro_active_search_id", String(payload.search.id))
+        setSelectedAuditSearchId(payload.search.id)
+        await fetchStatus(payload.search.id)
+      }
       setTab("snapshot")
     } catch (err) {
       setError(err.message || "Could not load saved result.")
@@ -563,9 +610,10 @@ export default function ClientPortal({ onLogout }) {
     }
   }
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = async (searchId = selectedAuditSearchId) => {
     try {
-      const res = await authFetch(`${API}/portal/report/pdf`)
+      const suffix = searchId ? `?search_id=${searchId}` : ""
+      const res = await authFetch(`${API}/portal/report/pdf${suffix}`)
       if (!res.ok) {
         setError("PDF not available yet.")
         return
@@ -631,7 +679,25 @@ export default function ClientPortal({ onLogout }) {
   const handleUpgrade = (search) => {
     if (!search?.id) return
     sessionStorage.setItem("aidbro_active_search_id", String(search.id))
+    setSelectedAuditSearchId(search.id)
     window.location.href = "/upgrade"
+  }
+
+  const handleOpenAudit = async (search) => {
+    if (!search?.id) return
+    sessionStorage.setItem("aidbro_active_search_id", String(search.id))
+    setSelectedAuditSearchId(search.id)
+    setReport(null)
+    try {
+      const statusData = await fetchStatus(search.id)
+      if (statusData?.report_ready) {
+        setTab("status")
+      } else {
+        setTab("status")
+      }
+    } catch (err) {
+      setError(err.message || "Could not load audit status.")
+    }
   }
 
   if (loading) {
@@ -673,6 +739,9 @@ export default function ClientPortal({ onLogout }) {
             </h2>
             <p style={{ color: "var(--gray)", fontSize: 14, marginTop: 4 }}>
               {status?.status_label
+                || (history.searches.some((search) => search.linked_audit_job)
+                  ? "Select a paid search from history to track that audit and open its final report."
+                  : null)
                 || (history.searches.length
                   ? `You have ${history.searches.length} saved search${history.searches.length > 1 ? "es" : ""} in your account.`
                   : "Run your first search and we will save it here automatically.")}
@@ -683,7 +752,7 @@ export default function ClientPortal({ onLogout }) {
             <button className="btn-secondary" onClick={handleNewSearch}>
               Start New Search
             </button>
-            {!status && latestSearch && (
+            {latestSearch && !latestSearch.linked_audit_job && (
               <button className="btn-primary" onClick={() => handleUpgrade(latestSearch)}>
                 Unlock Detailed Audit
               </button>
@@ -801,6 +870,7 @@ export default function ClientPortal({ onLogout }) {
                       loading={snapshotLoadingId === search.id}
                       onViewSnapshot={fetchSnapshot}
                       onUpgrade={handleUpgrade}
+                      onOpenAudit={handleOpenAudit}
                     />
                   ))}
                 </div>
@@ -811,6 +881,11 @@ export default function ClientPortal({ onLogout }) {
 
         {tab === "status" && status && (
           <div className="portal-status-tab">
+            {status.search_name && (
+              <p className="section-title" style={{ marginTop: 24 }}>
+                Tracking: {status.search_name}
+              </p>
+            )}
             <div className="portal-steps">
               {(status.steps || []).map((step, index, allSteps) => (
                 <div key={step.step || index} className="portal-step">
@@ -913,14 +988,20 @@ export default function ClientPortal({ onLogout }) {
           <SearchSnapshot
             snapshot={snapshot}
             onUpgrade={handleUpgrade}
+            onOpenAudit={handleOpenAudit}
             onDownloadPdf={handleDownloadSnapshotPDF}
             pdfLoading={snapshotPdfLoading}
-            isPaid={!!status}
+            hasLinkedAudit={!!snapshot.search?.linked_audit_job}
           />
         )}
 
         {tab === "report" && report && (
           <div className="portal-report-tab fade-up">
+            {status?.search_name && (
+              <p className="section-title" style={{ marginTop: 20 }}>
+                Report For: {status.search_name}
+              </p>
+            )}
             {report.ai_synthesis?.summary && (
               <>
                 <p className="section-title" style={{ marginTop: 20 }}>

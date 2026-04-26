@@ -173,14 +173,43 @@ function CompetitorTeaser({ competitorData }) {
   )
 }
 
-export default function ResultsDashboard({ data, leadId, onReset }) {
-  const { isAuthenticated, isPaid } = useAuth()
+export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
+  const { isAuthenticated, authFetch } = useAuth()
   const { price, formatted: priceFormatted } = useAuditPrice()
 
   const [liveData, setLiveData] = useState(data)
+  const [searchPaymentStatus, setSearchPaymentStatus] = useState(null)
   useEffect(() => {
     setLiveData(data)
   }, [data])
+
+  useEffect(() => {
+    if (!isAuthenticated || !searchId) {
+      setSearchPaymentStatus(null)
+      return
+    }
+
+    let cancelled = false
+    const loadSearchPaymentStatus = async () => {
+      try {
+        const res = await authFetch(`${API}/payment/status?search_id=${searchId}`)
+        const payload = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(payload.detail || "Could not load current search payment status.")
+        if (!cancelled) {
+          setSearchPaymentStatus(payload)
+        }
+      } catch {
+        if (!cancelled) {
+          setSearchPaymentStatus(null)
+        }
+      }
+    }
+
+    loadSearchPaymentStatus()
+    return () => {
+      cancelled = true
+    }
+  }, [authFetch, isAuthenticated, searchId])
 
   const currentData = liveData
   const { business, score, pagespeed, social, seo, competitors, keywords, insights } = currentData
@@ -188,6 +217,7 @@ export default function ResultsDashboard({ data, leadId, onReset }) {
   const topFixes = score?.top_fixes || []
   const total = score?.total_score || 0
   const isMocked = business?.is_mocked || false
+  const hasDetailedAuditForSearch = searchPaymentStatus?.has_paid === true
 
   const [pdfLoading, setPdfLoading] = useState(false)
 
@@ -238,7 +268,7 @@ export default function ResultsDashboard({ data, leadId, onReset }) {
             <a href="/auth" className="btn-primary" style={{ fontSize: 13, padding: "9px 16px" }}>
               🔑 Sign In / Register
             </a>
-          ) : !isPaid ? (
+          ) : !hasDetailedAuditForSearch ? (
             <a href="/upgrade" className="btn-primary" style={{ fontSize: 13, padding: "9px 16px" }}>
               ⭐ Unlock {priceFormatted}
             </a>
@@ -265,7 +295,7 @@ export default function ResultsDashboard({ data, leadId, onReset }) {
         </div>
       )}
 
-      {!isPaid && (
+      {!hasDetailedAuditForSearch && (
         <div className="upgrade-sticky-banner">
           <span>🔒 Get human-verified competitor rankings, full SEO crawl, social media audit</span>
           <a href={isAuthenticated ? "/upgrade" : "/auth"} className="upgrade-sticky-btn">
@@ -327,6 +357,11 @@ export default function ResultsDashboard({ data, leadId, onReset }) {
           <PillarChart pillars={pillars} />
         </div>
 
+        <div className="demo-banner" style={{ marginBottom: 24 }}>
+          <strong>Data consistency note:</strong> identical searches may reuse the latest captured audit snapshot for up to 24 hours so your score stays stable.
+          If you have already updated your website, Google profile, or social links, run a fresh check after the cache window or update the official links before rechecking.
+        </div>
+
         {insights && (
           <div className="insight-card fade-up-d2">
             <div className="insight-card-header">
@@ -378,7 +413,7 @@ export default function ResultsDashboard({ data, leadId, onReset }) {
           </>
         )}
 
-        {!isPaid && (
+        {!hasDetailedAuditForSearch && (
           <PremiumFeatures price={priceFormatted} isAuthenticated={isAuthenticated} />
         )}
 
@@ -397,9 +432,9 @@ export default function ResultsDashboard({ data, leadId, onReset }) {
         )}
 
         <p className="section-title fade-up">
-          {isPaid ? "🏆 COMPETITOR ANALYSIS" : "🧾 DETAILED AUDIT REPORT"}
+          {hasDetailedAuditForSearch ? "🏆 COMPETITOR ANALYSIS" : "🧾 DETAILED AUDIT REPORT"}
         </p>
-        {isPaid ? (
+        {hasDetailedAuditForSearch ? (
           <CompetitorTable competitorData={competitors} keywordData={keywords} />
         ) : (
           <PremiumSectionLock
@@ -517,7 +552,7 @@ export default function ResultsDashboard({ data, leadId, onReset }) {
         )}
 
         <div className="results-footer-cta fade-up">
-          {isPaid ? (
+          {hasDetailedAuditForSearch ? (
             <>
               <div className="results-footer-cta-text">
                 <h3>Your <span style={{ color: scoreColor }}>{total}/100</span> score is ready to fix.</h3>

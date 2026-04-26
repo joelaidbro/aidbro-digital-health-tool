@@ -10,7 +10,7 @@ import ClientPortal from "./pages/ClientPortal"
 import { API } from "./config/api"
 
 function InnerApp() {
-  const { isAuthenticated, isPaid, loading } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
   const path = window.location.pathname.replace(/\/+$/, "") || "/"
 
   if (loading) {
@@ -66,11 +66,6 @@ function InnerApp() {
   if (path === "/upgrade") {
     if (!isAuthenticated) {
       window.history.replaceState({}, "", "/auth")
-      window.location.reload()
-      return null
-    }
-    if (isPaid) {
-      window.history.replaceState({}, "", "/portal")
       window.location.reload()
       return null
     }
