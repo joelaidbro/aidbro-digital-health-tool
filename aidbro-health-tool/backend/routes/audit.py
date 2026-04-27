@@ -107,12 +107,29 @@ def _save_payload(
 def _build_cached_google_data(full_result: dict, fallback_name: str) -> dict:
     business = full_result.get("business", {})
     return {
+        "found": business.get(
+            "google_profile_found",
+            business.get("rating", 0) > 0
+            or bool(business.get("phone"))
+            or bool(business.get("maps_url")),
+        ),
         "name": business.get("name", fallback_name),
         "address": business.get("address", ""),
         "phone": business.get("phone", ""),
         "website": business.get("website", ""),
         "rating": business.get("rating", 0),
         "total_reviews": business.get("total_reviews", 0),
+        "match_confidence": business.get("google_match_confidence", ""),
+        "match_score": business.get("google_match_score", 0),
+        "match_warning": business.get("google_match_warning", ""),
+        "matched_profile_name": business.get(
+            "matched_profile_name",
+            business.get("name", fallback_name),
+        ),
+        "matched_profile_address": business.get(
+            "matched_profile_address",
+            business.get("address", ""),
+        ),
         "maps_url": business.get("maps_url", ""),
         "mocked": business.get("is_mocked", False),
     }
@@ -172,7 +189,11 @@ async def run_audit(
             auto_email = full_result.get("business", {}).get("email", "")
 
     if full_result is None:
-        google_data = await search_business(req.business_name, req.location)
+        google_data = await search_business(
+            req.business_name,
+            req.location,
+            req.website_url.strip(),
+        )
         raw_url = req.website_url.strip() or google_data.get("website", "")
         website_url = normalise_url(raw_url)
 
@@ -230,6 +251,18 @@ async def run_audit(
             "rating": google_data.get("rating", 0),
             "total_reviews": google_data.get("total_reviews", 0),
             "maps_url": google_data.get("maps_url", ""),
+            "google_profile_found": google_data.get("found", False),
+            "google_match_confidence": google_data.get("match_confidence", ""),
+            "google_match_score": google_data.get("match_score", 0),
+            "google_match_warning": google_data.get("match_warning", ""),
+            "matched_profile_name": google_data.get(
+                "matched_profile_name",
+                google_data.get("name", req.business_name),
+            ),
+            "matched_profile_address": google_data.get(
+                "matched_profile_address",
+                google_data.get("address", ""),
+            ),
             "is_mocked": google_data.get("mocked", False),
         }
 
@@ -333,7 +366,11 @@ async def generate_report_pdf(
     if not req.business_name.strip():
         raise HTTPException(400, "Business name is required")
 
-    google_data = await search_business(req.business_name, req.location)
+    google_data = await search_business(
+        req.business_name,
+        req.location,
+        req.website_url.strip(),
+    )
     raw_url = req.website_url.strip() or google_data.get("website", "")
     website_url = normalise_url(raw_url)
     manual_social_inputs = _manual_socials(req)

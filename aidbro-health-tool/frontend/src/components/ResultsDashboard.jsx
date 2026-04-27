@@ -217,6 +217,8 @@ export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
   const topFixes = score?.top_fixes || []
   const total = score?.total_score || 0
   const isMocked = business?.is_mocked || false
+  const googleMatchWarning = business?.google_match_warning || ""
+  const googleMatchConfidence = business?.google_match_confidence || ""
   const hasDetailedAuditForSearch = searchPaymentStatus?.has_paid === true
 
   const [pdfLoading, setPdfLoading] = useState(false)
@@ -292,6 +294,15 @@ export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
       {isMocked && (
         <div className="demo-banner">
           ⚠️ <strong>Demo Mode</strong> — Google API key not connected. Data is illustrative.
+        </div>
+      )}
+
+      {!!googleMatchWarning && !isMocked && (
+        <div className="demo-banner">
+          <strong>
+            {googleMatchConfidence === "medium" ? "Google profile check:" : "Google profile not confirmed:"}
+          </strong>{" "}
+          {googleMatchWarning}
         </div>
       )}
 

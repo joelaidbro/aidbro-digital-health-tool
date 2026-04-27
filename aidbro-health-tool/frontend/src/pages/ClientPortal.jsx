@@ -225,6 +225,17 @@ function SearchSnapshot({ snapshot, onUpgrade, onOpenAudit, onDownloadPdf, pdfLo
         If your business details changed after this audit, run a fresh check after the cache window for updated live data.
       </div>
 
+      {!!business.google_match_warning && (
+        <div className="demo-banner" style={{ marginBottom: 24, borderRadius: 12 }}>
+          <strong>
+            {business.google_match_confidence === "medium"
+              ? "Google profile check:"
+              : "Google profile not confirmed:"}
+          </strong>{" "}
+          {business.google_match_warning}
+        </div>
+      )}
+
       {(business.website || business.phone || business.email) && (
         <>
           <p className="section-title">Business Details</p>
