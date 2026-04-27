@@ -48,6 +48,7 @@ async def _get_request_user(db: AsyncSession, request: Request):
 class AuditRequest(BaseModel):
     business_name: str
     location: str
+    mobile_number: Optional[str] = ""
     category: Optional[str] = "General Business"
     website_url: Optional[str] = ""
     instagram_url: Optional[str] = ""
@@ -91,6 +92,8 @@ def _save_payload(
         "twitter_url": req.twitter_url,
         "auto_phone": google_data.get("phone", "") or None,
         "auto_email": auto_email or None,
+        "manual_contact_phone": req.mobile_number.strip() or None,
+        "manual_contact_captured_at": datetime.now(timezone.utc) if req.mobile_number.strip() else None,
         "total_score": score_data.get("total_score"),
         "grade": score_data.get("grade"),
         "score_label": score_data.get("label"),
@@ -145,6 +148,8 @@ async def run_audit(
         raise HTTPException(400, "Business name is required")
     if not req.location.strip():
         raise HTTPException(400, "Location is required")
+    if not req.mobile_number.strip():
+        raise HTTPException(400, "Mobile number is required")
 
     user = await _get_request_user(db, request)
     requester_ip = request.client.host if request.client else None
@@ -306,9 +311,9 @@ async def run_audit(
                 "instagram_url": save_data["instagram_url"],
                 "facebook_url": save_data["facebook_url"],
                 "linkedin_url": save_data["linkedin_url"],
-                "contact_phone": save_data["auto_phone"],
+                "contact_phone": save_data["manual_contact_phone"] or save_data["auto_phone"],
                 "contact_email": save_data["auto_email"],
-                "contact_captured_at": None,
+                "contact_captured_at": save_data["manual_contact_captured_at"],
                 "total_score": save_data["total_score"],
                 "grade": save_data["grade"],
                 "score_label": save_data["score_label"],

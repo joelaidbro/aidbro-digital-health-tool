@@ -76,6 +76,7 @@ export default function SearchForm({ onSearch }) {
   const [businessName, setBusinessName] = useState("")
   const [location, setLocation]         = useState("")
   const [category, setCategory]         = useState("")
+  const [mobileNumber, setMobileNumber] = useState("")
   const [websiteUrl, setWebsiteUrl]     = useState("")
   const [instagramUrl, setInstagramUrl] = useState("")
   const [facebookUrl, setFacebookUrl]   = useState("")
@@ -89,6 +90,11 @@ export default function SearchForm({ onSearch }) {
     if (!businessName.trim()) e.businessName = "Business name is required"
     if (!location.trim())     e.location     = "City / area is required"
     if (!category)            e.category     = "Please select a business category"
+    if (!mobileNumber.trim()) {
+      e.mobileNumber = "Mobile number is required"
+    } else if (mobileNumber.replace(/\D/g, "").length < 10) {
+      e.mobileNumber = "Enter a valid mobile number"
+    }
     return e
   }
 
@@ -102,6 +108,7 @@ export default function SearchForm({ onSearch }) {
       businessName,
       location,
       category,
+      mobileNumber,
       websiteUrl,
       instagramUrl,
       facebookUrl,
@@ -242,7 +249,7 @@ export default function SearchForm({ onSearch }) {
               </div>
 
               {/* Row 2 — Category */}
-              <div className="form-row single">
+              <div className="form-row">
                 <div className="form-field">
                   <label>BUSINESS CATEGORY *</label>
                   <select
@@ -266,6 +273,25 @@ export default function SearchForm({ onSearch }) {
                   </select>
                   {errors.category && (
                     <span className="field-error">{errors.category}</span>
+                  )}
+                </div>
+                <div className="form-field">
+                  <label>MOBILE NUMBER *</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9876543210"
+                    value={mobileNumber}
+                    onChange={(e) => {
+                      setMobileNumber(e.target.value)
+                      setErrors((v) => ({ ...v, mobileNumber: "" }))
+                    }}
+                    inputMode="tel"
+                  />
+                  <span className="field-help">
+                    This is required so we can save your audit enquiry and contact you if you request support.
+                  </span>
+                  {errors.mobileNumber && (
+                    <span className="field-error">{errors.mobileNumber}</span>
                   )}
                 </div>
               </div>
@@ -381,7 +407,7 @@ export default function SearchForm({ onSearch }) {
               ["⚡", "60 Second Results"],
               ["📊", "5 Audit Pillars"],
               ["🤖", "AI-Powered Report"],
-              ["🇮🇳", "India-Wide"],
+              ["🌐", "World-Wide"],
             ].map(([icon, text]) => (
               <div key={text} className="trust-item">
                 <span className="ti-icon">{icon}</span>
