@@ -122,6 +122,15 @@ def _platform_points(weight: str, total_pool: int) -> int:
     return 0  # skip
 
 
+PILLAR_WEIGHTS = {
+    "google_business": 20,
+    "website": 50,
+    "social_media": 10,
+    "reputation": 10,
+    "competitor": 10,
+}
+
+
 def calculate_score(
     google_data: dict,
     pagespeed_data: dict,
@@ -170,10 +179,10 @@ def calculate_score(
         "No hours listed — customers don't know when you're open.",
         "Add accurate opening hours in your Google Business Profile.", "Digital Marketing"))
 
-    p1.append(_check("Business description filled", google_data.get("has_description", False), 3, 3,
-        "Business description helps Google understand your services.",
-        "No description — missing a free SEO opportunity.",
-        "Write a 250-character description with your key services and location.", "Digital Marketing"))
+    p1.append(_check("Profile status operational", google_data.get("business_status") == "OPERATIONAL", 3, 3,
+        "Google lists this business as operational.",
+        "Google is not showing this profile as fully operational.",
+        "Check your Google Business Profile status and complete verification if needed.", "Digital Marketing"))
 
     p1.append(_check("Website linked on Google", bool(google_data.get("website")), 3, 3,
         "Website linked — customers can visit your site from Google.",
@@ -407,7 +416,16 @@ def calculate_score(
     pillars["competitor"] = _pillar("Competitive Position", "🏆", p5_score, 10, p5)
 
     # ── Total ─────────────────────────────────────────────────────────────────
-    total = min(sum(p["score"] for p in pillars.values()), 100)
+    total = min(
+        round(
+            sum(
+                ((pillar["score"] / pillar["max"]) * PILLAR_WEIGHTS.get(key, 0))
+                if pillar["max"] else 0
+                for key, pillar in pillars.items()
+            )
+        ),
+        100,
+    )
     grade = "A" if total >= 80 else "B" if total >= 65 else "C" if total >= 50 else "D" if total >= 35 else "F"
     label = {"A": "Excellent", "B": "Good", "C": "Average", "D": "Needs Work", "F": "Critical"}[grade]
 
@@ -424,6 +442,7 @@ def calculate_score(
         "grade":       grade,
         "label":       label,
         "category":    category,
+        "weighting":   PILLAR_WEIGHTS,
         "pillars":     pillars,
         "top_fixes":   all_failed[:3],
         "is_mocked":   google_data.get("mocked", False),

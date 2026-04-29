@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { API } from "../../src/config/api"
+import SearchAuditSnapshot from "../components/SearchAuditSnapshot"
 
 function SummaryCard({ label, value }) {
   return (
@@ -89,7 +90,6 @@ export default function UserDetail({
   }
 
   const user = detail?.user || {}
-  const topFixes = activeSearch?.audit_json?.score?.top_fixes || []
   const firstAuditJob = detail?.audit_jobs?.find((job) => job.legacy_client_id)
 
   return (
@@ -138,21 +138,15 @@ export default function UserDetail({
             <div><strong>Selected business:</strong> {activeSearch.business_name}</div>
             <div><strong>Location:</strong> {activeSearch.location}</div>
             <div><strong>Website:</strong> {activeSearch.website_url || "Not detected"}</div>
-            <div><strong>Detected contact:</strong> {activeSearch.auto_email || activeSearch.auto_phone || "Not captured"}</div>
+            <div><strong>Submitted phone:</strong> {activeSearch.manual_contact_phone || activeSearch.auto_phone || "Not captured"}</div>
+            <div><strong>Detected contact:</strong> {activeSearch.auto_email || "Not captured"}</div>
           </div>
 
-          {topFixes.length > 0 && (
-            <div className="admin-subsection">
-              <h4>Top fixes from selected search</h4>
-              <ul className="admin-bullet-list">
-                {topFixes.slice(0, 5).map((fix, index) => (
-                  <li key={`${fix.check}-${index}`}>
-                    <strong>{fix.check}:</strong> {fix.fix}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <SearchAuditSnapshot
+            search={activeSearch}
+            audit={activeSearch.audit_json || {}}
+            title="Selected Search Result"
+          />
         </>
       )}
 

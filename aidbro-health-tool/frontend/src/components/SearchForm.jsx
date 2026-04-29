@@ -47,6 +47,19 @@ const BUSINESS_CATEGORIES = [
   ]},
 ]
 
+const COUNTRY_OPTIONS = [
+  { code: "IN", label: "India", dialCode: "+91", nationalLength: 10 },
+  { code: "AE", label: "UAE", dialCode: "+971", nationalLength: 9 },
+  { code: "US", label: "United States", dialCode: "+1", nationalLength: 10 },
+  { code: "CA", label: "Canada", dialCode: "+1", nationalLength: 10 },
+  { code: "GB", label: "United Kingdom", dialCode: "+44", nationalLength: 10 },
+  { code: "AU", label: "Australia", dialCode: "+61", nationalLength: 9 },
+  { code: "SG", label: "Singapore", dialCode: "+65", nationalLength: 8 },
+  { code: "SA", label: "Saudi Arabia", dialCode: "+966", nationalLength: 9 },
+  { code: "QA", label: "Qatar", dialCode: "+974", nationalLength: 8 },
+  { code: "KW", label: "Kuwait", dialCode: "+965", nationalLength: 8 },
+]
+
 const SOCIAL_PLATFORMS = [
   {
     key: "instagram_url",
@@ -76,6 +89,7 @@ export default function SearchForm({ onSearch }) {
   const [businessName, setBusinessName] = useState("")
   const [location, setLocation]         = useState("")
   const [category, setCategory]         = useState("")
+  const [countryCode, setCountryCode]   = useState("IN")
   const [mobileNumber, setMobileNumber] = useState("")
   const [websiteUrl, setWebsiteUrl]     = useState("")
   const [instagramUrl, setInstagramUrl] = useState("")
@@ -84,16 +98,19 @@ export default function SearchForm({ onSearch }) {
   const [showSocial, setShowSocial]     = useState(false)
   const [loading, setLoading]           = useState(false)
   const [errors, setErrors]             = useState({})
+  const activeCountry =
+    COUNTRY_OPTIONS.find((country) => country.code === countryCode) || COUNTRY_OPTIONS[0]
 
   const validate = () => {
     const e = {}
+    const mobileDigits = mobileNumber.replace(/\D/g, "")
     if (!businessName.trim()) e.businessName = "Business name is required"
     if (!location.trim())     e.location     = "City / area is required"
     if (!category)            e.category     = "Please select a business category"
     if (!mobileNumber.trim()) {
       e.mobileNumber = "Mobile number is required"
-    } else if (mobileNumber.replace(/\D/g, "").length < 10) {
-      e.mobileNumber = "Enter a valid mobile number"
+    } else if (mobileDigits.length !== activeCountry.nationalLength) {
+      e.mobileNumber = `Enter a valid ${activeCountry.label} mobile number (${activeCountry.nationalLength} digits)`
     }
     return e
   }
@@ -104,11 +121,12 @@ export default function SearchForm({ onSearch }) {
     if (Object.keys(e).length) { setErrors(e); return }
     setErrors({})
     setLoading(true)
+    const mobileDigits = mobileNumber.replace(/\D/g, "")
     await onSearch({
       businessName,
       location,
       category,
-      mobileNumber,
+      mobileNumber: `${activeCountry.dialCode}${mobileDigits}`,
       websiteUrl,
       instagramUrl,
       facebookUrl,
@@ -277,18 +295,35 @@ export default function SearchForm({ onSearch }) {
                 </div>
                 <div className="form-field">
                   <label>MOBILE NUMBER *</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 9876543210"
-                    value={mobileNumber}
-                    onChange={(e) => {
-                      setMobileNumber(e.target.value)
-                      setErrors((v) => ({ ...v, mobileNumber: "" }))
-                    }}
-                    inputMode="tel"
-                  />
+                  <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 10 }}>
+                    <select
+                      value={countryCode}
+                      onChange={(e) => {
+                        setCountryCode(e.target.value)
+                        setErrors((v) => ({ ...v, mobileNumber: "" }))
+                      }}
+                      className="form-select"
+                    >
+                      {COUNTRY_OPTIONS.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.label} {country.dialCode}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="tel"
+                      placeholder={`Enter ${activeCountry.nationalLength}-digit number`}
+                      value={mobileNumber}
+                      onChange={(e) => {
+                        setMobileNumber(e.target.value.replace(/\D/g, ""))
+                        setErrors((v) => ({ ...v, mobileNumber: "" }))
+                      }}
+                      inputMode="tel"
+                      maxLength={activeCountry.nationalLength}
+                    />
+                  </div>
                   <span className="field-help">
-                    This is required so we can save your audit enquiry and contact you if you request support.
+                    This is required so we can save your audit enquiry and contact you if you request support. The number format adapts to the selected country code.
                   </span>
                   {errors.mobileNumber && (
                     <span className="field-error">{errors.mobileNumber}</span>

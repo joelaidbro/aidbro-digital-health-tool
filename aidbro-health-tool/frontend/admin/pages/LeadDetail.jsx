@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { API } from "../../src/config/api"
+import SearchAuditSnapshot from "../components/SearchAuditSnapshot"
 
 function SummaryCard({ label, value }) {
   return (
@@ -139,7 +140,6 @@ export default function LeadDetail({
   const score = audit.score || {}
   const pagespeed = audit.pagespeed || {}
   const social = audit.social || {}
-
   return (
     <section className="admin-panel-card admin-panel-card-stretch">
       <div className="admin-section-header">
@@ -217,18 +217,11 @@ export default function LeadDetail({
         />
       </label>
 
-      {score.top_fixes?.length > 0 && (
-        <div className="admin-subsection">
-          <h4>Top priority fixes from the free audit</h4>
-          <ul className="admin-bullet-list">
-            {score.top_fixes.slice(0, 4).map((fix, index) => (
-              <li key={`${fix.check}-${index}`}>
-                <strong>{fix.check}:</strong> {fix.fix}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <SearchAuditSnapshot
+        search={lead}
+        audit={audit}
+        title="Full Search Result"
+      />
 
       {(message || error) && (
         <div className={`admin-inline-message ${error ? "error" : "success"}`}>

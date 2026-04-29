@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { API } from "../../src/config/api"
+import SearchAuditSnapshot from "../components/SearchAuditSnapshot"
 
 function SummaryCard({ label, value }) {
   return (
@@ -83,10 +84,9 @@ export default function AnonymousSearchDetail({
   const search = detail?.search || {}
   const audit = detail?.audit_json || {}
   const score = audit.score || {}
-  const pagespeed = audit.pagespeed || {}
   const business = audit.business || {}
+  const pagespeed = audit.pagespeed || {}
   const linkedAudit = detail?.linked_audit_job
-  const topFixes = score.top_fixes || []
 
   return (
     <section className="admin-panel-card admin-panel-card-stretch">
@@ -110,38 +110,16 @@ export default function AnonymousSearchDetail({
 
       <div className="admin-info-list">
         <div><strong>Website:</strong> {search.website_url || business.website || "Not detected"}</div>
-        <div><strong>Auto phone:</strong> {search.auto_phone || business.phone || "Not captured"}</div>
-        <div><strong>Auto email:</strong> {search.auto_email || business.email || "Not captured"}</div>
+        <div><strong>Submitted phone:</strong> {search.manual_contact_phone || search.auto_phone || "Not captured"}</div>
+        <div><strong>Detected email:</strong> {search.auto_email || "Not captured"}</div>
         <div><strong>Legacy lead:</strong> {detail?.legacy_lead?.id || "Not linked"}</div>
       </div>
 
-      {topFixes.length > 0 && (
-        <div className="admin-subsection">
-          <h4>Top priority fixes</h4>
-          <ul className="admin-bullet-list">
-            {topFixes.slice(0, 5).map((fix, index) => (
-              <li key={`${fix.check}-${index}`}>
-                <strong>{fix.check}:</strong> {fix.fix}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {score.pillars && (
-        <div className="admin-subsection">
-          <h4>Pillar summary</h4>
-          <div className="admin-grid admin-grid-two">
-            {Object.values(score.pillars).map((pillar) => (
-              <div key={pillar.name} className="admin-summary-card">
-                <div className="admin-summary-label">{pillar.name}</div>
-                <div className="admin-summary-value">{pillar.score}/{pillar.max}</div>
-                <div className="admin-metric-hint">{pillar.percent}% complete</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <SearchAuditSnapshot
+        search={search}
+        audit={audit}
+        title="Full Search Result"
+      />
 
       {error && <div className="admin-inline-message error">{error}</div>}
     </section>

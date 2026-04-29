@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { Component, useCallback, useEffect, useState } from "react"
 import AdminLogin from "./pages/AdminLogin"
 import AnonymousSearches from "./pages/AnonymousSearches"
 import AnonymousSearchDetail from "./pages/AnonymousSearchDetail"
@@ -13,6 +13,37 @@ import TeamManagement from "./pages/TeamManagement"
 import { API } from "../src/config/api"
 const TOKEN_KEY = "aidbro_admin_token"
 const USER_KEY = "aidbro_admin_user"
+
+class AdminErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, message: "" }
+  }
+
+  static getDerivedStateFromError(error) {
+    return {
+      hasError: true,
+      message: error?.message || "A rendering error occurred in this admin section.",
+    }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, message: "" })
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <section className="admin-panel-card admin-placeholder admin-error-text">
+          {this.state.message}
+        </section>
+      )
+    }
+    return this.props.children
+  }
+}
 
 export default function AdminApp() {
   const [token, setToken] = useState(() => sessionStorage.getItem(TOKEN_KEY) || "")
@@ -214,105 +245,116 @@ export default function AdminApp() {
           </div>
         </header>
 
-        {activePage === "dashboard" && (
-          <Analytics token={token} refreshKey={refreshKey} onUnauthorized={handleLogout} />
-        )}
+        <AdminErrorBoundary
+          resetKey={[
+            activePage,
+            refreshKey,
+            selectedAnonymousSearchId,
+            selectedUserId,
+            selectedLeadId,
+            selectedAuditId,
+          ].join(":")}
+        >
+          {activePage === "dashboard" && (
+            <Analytics token={token} refreshKey={refreshKey} onUnauthorized={handleLogout} />
+          )}
 
-        {activePage === "anonymous" && (
-          <div className="admin-workspace admin-workspace-split">
-            <AnonymousSearches
-              token={token}
-              refreshKey={refreshKey}
-              selectedSearchId={selectedAnonymousSearchId}
-              onSelectSearch={setSelectedAnonymousSearchId}
-              onUnauthorized={handleLogout}
-            />
-            <AnonymousSearchDetail
-              token={token}
-              searchId={selectedAnonymousSearchId}
-              refreshKey={refreshKey}
-              onOpenAudit={(clientId) => {
-                setSelectedAuditId(clientId)
-                setActivePage("audits")
-              }}
-              onUnauthorized={handleLogout}
-            />
-          </div>
-        )}
+          {activePage === "anonymous" && (
+            <div className="admin-workspace admin-workspace-split">
+              <AnonymousSearches
+                token={token}
+                refreshKey={refreshKey}
+                selectedSearchId={selectedAnonymousSearchId}
+                onSelectSearch={setSelectedAnonymousSearchId}
+                onUnauthorized={handleLogout}
+              />
+              <AnonymousSearchDetail
+                token={token}
+                searchId={selectedAnonymousSearchId}
+                refreshKey={refreshKey}
+                onOpenAudit={(clientId) => {
+                  setSelectedAuditId(clientId)
+                  setActivePage("audits")
+                }}
+                onUnauthorized={handleLogout}
+              />
+            </div>
+          )}
 
-        {activePage === "users" && (
-          <div className="admin-workspace admin-workspace-split">
-            <UsersTable
-              token={token}
-              refreshKey={refreshKey}
-              selectedUserId={selectedUserId}
-              onSelectUser={setSelectedUserId}
-              onUnauthorized={handleLogout}
-            />
-            <UserDetail
-              token={token}
-              userId={selectedUserId}
-              refreshKey={refreshKey}
-              onOpenAudit={(clientId) => {
-                setSelectedAuditId(clientId)
-                setActivePage("audits")
-              }}
-              onUnauthorized={handleLogout}
-            />
-          </div>
-        )}
+          {activePage === "users" && (
+            <div className="admin-workspace admin-workspace-split">
+              <UsersTable
+                token={token}
+                refreshKey={refreshKey}
+                selectedUserId={selectedUserId}
+                onSelectUser={setSelectedUserId}
+                onUnauthorized={handleLogout}
+              />
+              <UserDetail
+                token={token}
+                userId={selectedUserId}
+                refreshKey={refreshKey}
+                onOpenAudit={(clientId) => {
+                  setSelectedAuditId(clientId)
+                  setActivePage("audits")
+                }}
+                onUnauthorized={handleLogout}
+              />
+            </div>
+          )}
 
-        {activePage === "leads" && (
-          <div className="admin-workspace admin-workspace-split">
-            <LeadsTable
+          {activePage === "leads" && (
+            <div className="admin-workspace admin-workspace-split">
+              <LeadsTable
+                token={token}
+                refreshKey={refreshKey}
+                selectedLeadId={selectedLeadId}
+                onSelectLead={setSelectedLeadId}
+                onUnauthorized={handleLogout}
+              />
+              <LeadDetail
+                token={token}
+                leadId={selectedLeadId}
+                refreshKey={refreshKey}
+                onSaved={bumpRefresh}
+                onOpenAudit={(clientId) => {
+                  setSelectedAuditId(clientId)
+                  setActivePage("audits")
+                }}
+                onUnauthorized={handleLogout}
+              />
+            </div>
+          )}
+
+          {activePage === "audits" && (
+            <div className="admin-workspace admin-workspace-split admin-workspace-audits">
+              <AuditQueue
+                token={token}
+                refreshKey={refreshKey}
+                selectedAuditId={selectedAuditId}
+                onSelectAudit={setSelectedAuditId}
+                onUnauthorized={handleLogout}
+              />
+              <AuditEditor
+                token={token}
+                auditId={selectedAuditId}
+                user={user}
+                refreshKey={refreshKey}
+                onSaved={bumpRefresh}
+                onUnauthorized={handleLogout}
+              />
+            </div>
+          )}
+
+          {activePage === "team" && user.role === "super_admin" && (
+            <TeamManagement
               token={token}
-              refreshKey={refreshKey}
-              selectedLeadId={selectedLeadId}
-              onSelectLead={setSelectedLeadId}
-              onUnauthorized={handleLogout}
-            />
-            <LeadDetail
-              token={token}
-              leadId={selectedLeadId}
               refreshKey={refreshKey}
               onSaved={bumpRefresh}
-              onOpenAudit={(clientId) => {
-                setSelectedAuditId(clientId)
-                setActivePage("audits")
-              }}
               onUnauthorized={handleLogout}
             />
-          </div>
-        )}
-
-        {activePage === "audits" && (
-          <div className="admin-workspace admin-workspace-split admin-workspace-audits">
-            <AuditQueue
-              token={token}
-              refreshKey={refreshKey}
-              selectedAuditId={selectedAuditId}
-              onSelectAudit={setSelectedAuditId}
-              onUnauthorized={handleLogout}
-            />
-            <AuditEditor
-              token={token}
-              auditId={selectedAuditId}
-              user={user}
-              refreshKey={refreshKey}
-              onSaved={bumpRefresh}
-              onUnauthorized={handleLogout}
-            />
-          </div>
-        )}
-
-        {activePage === "team" && user.role === "super_admin" && (
-          <TeamManagement
-            token={token}
-            refreshKey={refreshKey}
-            onSaved={bumpRefresh}
-            onUnauthorized={handleLogout}
-          />
-        )}
+          )}
+        </AdminErrorBoundary>
       </main>
     </div>
   )

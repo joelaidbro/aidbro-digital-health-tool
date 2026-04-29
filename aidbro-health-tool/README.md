@@ -7,6 +7,7 @@ The project currently includes:
 - A public audit tool for free digital health checks
 - Google Places and PageSpeed based website/profile analysis
 - SEO crawl, social detection, competitor snapshot, and AI insights
+- Required mobile capture with country-code aware validation
 - User authentication and saved search history
 - Paid detailed audits with Razorpay
 - A client portal for paid report tracking and downloads
@@ -65,6 +66,8 @@ Database (PostgreSQL)
 - Anonymous search limiting by IP
 - Search result stability cache for repeat checks
 - Confidence-based Google profile matching
+- Search-specific paid audit status and report access in the portal
+- Full audit snapshot viewing inside admin detail screens
 
 ## 4. Tech Stack
 
@@ -266,6 +269,7 @@ The internal admin frontend runs separately from the public app.
 | [frontend/admin/pages/AuditQueue.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\AuditQueue.jsx) | Paid audit queue |
 | [frontend/admin/pages/AuditEditor.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\AuditEditor.jsx) | Detailed audit workbench for analysts/managers |
 | [frontend/admin/pages/TeamManagement.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\TeamManagement.jsx) | Admin account management |
+| [frontend/admin/components/SearchAuditSnapshot.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\components\SearchAuditSnapshot.jsx) | Shared full-result renderer used in admin detail views |
 
 #### `frontend/auth/`, `frontend/login/`, `frontend/register/`, `frontend/portal/`, `frontend/upgrade/`
 
@@ -345,6 +349,12 @@ All backend routes are mounted under `/api`.
 - Anonymous users can run 2 audits per IP in a rolling 7-day window
 - Logged-in users are currently unlimited
 
+### Contact capture
+
+- A mobile number is required on the public audit form
+- The form supports country-code selection and validates the local number length by country
+- The submitted number is stored with the audit/search record and used as the primary manual phone contact
+
 ### Search history
 
 - Logged-in users get saved search history
@@ -353,6 +363,13 @@ All backend routes are mounted under `/api`.
 ### Paid audit ownership
 
 - Detailed audit purchases are linked to a specific search, not just to the overall account
+- Portal status, report view, and report PDF actions are resolved per selected paid search
+
+### Scoring model
+
+- Website quality now carries 50% of the total digital health score
+- The remaining score is distributed across Google Business profile, social presence, reputation, and competitor position
+- The old Google "business description" scoring check was removed because Google Places `editorialSummary` is not a reliable proxy for the owner-entered GBP description
 
 ### Score consistency
 
@@ -363,6 +380,19 @@ All backend routes are mounted under `/api`.
 
 - The Google Places layer now uses confidence-based matching
 - Low-confidence Google profile matches are excluded from scoring to avoid showing the wrong company
+- Medium-confidence matches are still usable, but the UI shows a verification warning
+
+### Social presence detection source
+
+The current social checker is a lightweight presence detector, not an official platform API integration.
+
+It combines:
+
+- manually entered social links from the user
+- website HTML scraping for known platform URLs such as Instagram, Facebook, LinkedIn, YouTube, and X
+- WhatsApp presence inference from detected business phone numbers
+
+It does not currently fetch follower counts, post frequency, engagement metrics, or platform-authenticated account analytics
 
 ## 10. Environment Variables
 
