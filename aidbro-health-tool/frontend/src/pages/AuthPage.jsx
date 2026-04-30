@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { useAuditPrice } from "../components/useAuditPrice"
 import { GOOGLE_AUTH_URL } from "../config/api"
+import SiteLogo from "../components/SiteLogo"
 
 export default function AuthPage({ onSuccess, initialMode = "login" }) {
   const { register, login } = useAuth()
@@ -37,7 +38,7 @@ export default function AuthPage({ onSuccess, initialMode = "login" }) {
 
         {/* Logo */}
         <div className="auth-logo">
-          Aidbro <span>AI</span>
+          <SiteLogo compact />
         </div>
         <p className="auth-sub">
           {mode === "login"

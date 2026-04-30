@@ -11,6 +11,11 @@ const routeRewrites = new Map([
   ['/register', '/register/'],
   ['/upgrade', '/upgrade/'],
   ['/portal', '/portal/'],
+  ['/about-us', '/about-us/'],
+  ['/privacy-policy', '/privacy-policy/'],
+  ['/terms-and-conditions', '/terms-and-conditions/'],
+  ['/return-policy', '/return-policy/'],
+  ['/contact-us', '/contact-us/'],
 ])
 
 function routeRewritePlugin() {
@@ -76,6 +81,11 @@ export default defineConfig(({ mode }) => {
           register: resolve(rootDir, 'register/index.html'),
           upgrade: resolve(rootDir, 'upgrade/index.html'),
           portal: resolve(rootDir, 'portal/index.html'),
+          aboutUs: resolve(rootDir, 'about-us/index.html'),
+          privacyPolicy: resolve(rootDir, 'privacy-policy/index.html'),
+          termsAndConditions: resolve(rootDir, 'terms-and-conditions/index.html'),
+          returnPolicy: resolve(rootDir, 'return-policy/index.html'),
+          contactUs: resolve(rootDir, 'contact-us/index.html'),
           admin: resolve(rootDir, 'admin.html'),
         },
       },

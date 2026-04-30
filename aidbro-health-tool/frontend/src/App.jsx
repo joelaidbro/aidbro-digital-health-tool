@@ -7,7 +7,23 @@ import AuthPage from "./pages/AuthPage"
 import AuthCallbackPage from "./pages/AuthCallbackPage"
 import PaymentPage from "./pages/PaymentPage"
 import ClientPortal from "./pages/ClientPortal"
+import InfoPage from "./pages/InfoPage"
+import SiteFooter from "./components/SiteFooter"
+import FloatingWhatsApp from "./components/FloatingWhatsApp"
+import { SITE_PAGES } from "./content/siteContent"
 import { API } from "./config/api"
+
+function PublicShell({ children, showFooter = true, showWhatsApp = true }) {
+  return (
+    <div className="app-root">
+      <div className="bg-grid" />
+      <div className="bg-glow" />
+      {children}
+      {showFooter && <SiteFooter />}
+      {showWhatsApp && <FloatingWhatsApp />}
+    </div>
+  )
+}
 
 function InnerApp() {
   const { isAuthenticated, loading } = useAuth()
@@ -15,17 +31,18 @@ function InnerApp() {
 
   if (loading) {
     return (
-      <div
-        className="app-root"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <div className="loading-orb" />
-      </div>
+      <PublicShell>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "100vh",
+          }}
+        >
+          <div className="loading-orb" />
+        </div>
+      </PublicShell>
     )
   }
 
@@ -41,6 +58,14 @@ function InnerApp() {
     )
   }
 
+  if (SITE_PAGES[path]) {
+    return (
+      <PublicShell showFooter={false}>
+        <InfoPage page={SITE_PAGES[path]} />
+      </PublicShell>
+    )
+  }
+
   if (path === "/auth" || path === "/login" || path === "/register") {
     if (isAuthenticated) {
       window.history.replaceState({}, "", "/portal")
@@ -49,9 +74,7 @@ function InnerApp() {
     }
 
     return (
-      <div className="app-root">
-        <div className="bg-grid" />
-        <div className="bg-glow" />
+      <PublicShell>
         <AuthPage
           initialMode={path === "/register" ? "register" : "login"}
           onSuccess={() => {
@@ -59,7 +82,7 @@ function InnerApp() {
             window.location.reload()
           }}
         />
-      </div>
+      </PublicShell>
     )
   }
 
@@ -71,16 +94,14 @@ function InnerApp() {
     }
 
     return (
-      <div className="app-root">
-        <div className="bg-grid" />
-        <div className="bg-glow" />
+      <PublicShell>
         <PaymentPage
           onSuccess={() => {
             window.history.replaceState({}, "", "/portal")
             window.location.reload()
           }}
         />
-      </div>
+      </PublicShell>
     )
   }
 
@@ -92,20 +113,22 @@ function InnerApp() {
     }
 
     return (
-      <div className="app-root">
-        <div className="bg-grid" />
-        <div className="bg-glow" />
+      <PublicShell>
         <ClientPortal
           onLogout={() => {
             window.history.replaceState({}, "", "/")
             window.location.reload()
           }}
         />
-      </div>
+      </PublicShell>
     )
   }
 
-  return <FreeAuditApp />
+  return (
+    <PublicShell>
+      <FreeAuditApp />
+    </PublicShell>
+  )
 }
 
 function FreeAuditApp() {
@@ -180,9 +203,7 @@ function FreeAuditApp() {
   }
 
   return (
-    <div className="app-root">
-      <div className="bg-grid" />
-      <div className="bg-glow" />
+    <>
       {state === "idle" && <SearchForm onSearch={handleSearch} />}
       {state === "loading" && <LoadingScreen />}
       {state === "results" && results && (
@@ -203,7 +224,7 @@ function FreeAuditApp() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 

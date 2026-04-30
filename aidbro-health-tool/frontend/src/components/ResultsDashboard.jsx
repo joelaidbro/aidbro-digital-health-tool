@@ -7,6 +7,7 @@ import SocialImprove from "./SocialImprove"
 import PillarChart from "./PillarChart"
 import { useAuditPrice } from "./useAuditPrice"
 import { useAuth } from "../context/AuthContext"
+import SiteLogo from "./SiteLogo"
 
 import { API } from "../config/api"
 const C = { green: "var(--green)", yellow: "var(--yellow)", red: "var(--red)" }
@@ -260,7 +261,9 @@ export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
   return (
     <div className="results-page">
       <div className="results-topbar">
-        <div className="results-topbar-logo">Aidbro <span>AI</span></div>
+        <a href="/" className="results-topbar-logo">
+          <SiteLogo compact />
+        </a>
         <div className="results-topbar-actions">
           <button className="pdf-btn" onClick={handleDownloadPDF} disabled={pdfLoading}>
             📄 {pdfLoading ? "Generating..." : "Download PDF"}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import SeoReport from "../components/SeoReport"
 import PillarChart from "../components/PillarChart"
+import SiteLogo from "../components/SiteLogo"
 
 import { API } from "../config/api"
 
@@ -722,10 +723,9 @@ export default function ClientPortal({ onLogout }) {
   return (
     <div className="portal-page">
       <div className="portal-topbar">
-        <div className="portal-topbar-logo">
-          Aidbro <span>AI</span>
-          <span className="navbar-badge">Client Portal</span>
-        </div>
+        <a href="/" className="portal-topbar-logo">
+          <SiteLogo badge="Client Portal" />
+        </a>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 13, color: "var(--gray)" }}>
             {user?.name || user?.email}

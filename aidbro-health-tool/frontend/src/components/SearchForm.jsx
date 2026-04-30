@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
+import SiteLogo from "./SiteLogo"
 
 const BUSINESS_CATEGORIES = [
   { group: "Local Services", options: [
@@ -142,17 +143,13 @@ export default function SearchForm({ onSearch }) {
 
       {/* Navbar */}
       <nav className="navbar">
-        <a href="#" className="navbar-logo">
-          Aidbro <span>AI</span>
-          <span className="navbar-badge">Digital Health Tool</span>
+        <a href="/" className="navbar-logo">
+          <SiteLogo badge="Digital Health Tool" />
         </a>
         <div className="navbar-links">
-          <a href="https://realsdigitalinnovations.com" target="_blank" rel="noreferrer">
-            About Aidbro
-          </a>
-          <a href="https://realsdigitalinnovations.com/contact.php" target="_blank" rel="noreferrer">
-            Contact
-          </a>
+          <a href="/about-us">About Us</a>
+          <a href="/privacy-policy">Privacy Policy</a>
+          <a href="/contact-us">Contact Us</a>
           {isAuthenticated ? (
             <a
               href="/portal"
@@ -173,15 +170,6 @@ export default function SearchForm({ onSearch }) {
               </a>
             </>
           )}
-          <a
-            href="https://wa.me/918589999362"
-            target="_blank"
-            rel="noreferrer"
-            className="btn-primary"
-            style={{ padding: "8px 18px", fontSize: "13px" }}
-          >
-            WhatsApp Us
-          </a>
         </div>
       </nav>
 

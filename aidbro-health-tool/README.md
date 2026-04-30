@@ -5,6 +5,8 @@ Aidbro Digital Health Tool is a full-stack audit platform for evaluating a busin
 The project currently includes:
 
 - A public audit tool for free digital health checks
+- Custom Aidbro branding with site logo, footer, and floating WhatsApp action
+- Internal About, Privacy Policy, Terms, Return Policy, and Contact pages hosted on the same domain
 - Google Places and PageSpeed based website/profile analysis
 - SEO crawl, social detection, competitor snapshot, and AI insights
 - Required mobile capture with country-code aware validation
@@ -18,6 +20,7 @@ The project currently includes:
 ```text
 Frontend (React + Vite)
   |- Public free audit app
+  |- Internal legal / policy / company info pages
   |- Auth / register / login pages
   |- Upgrade / payment page
   |- Client portal
@@ -63,6 +66,8 @@ Database (PostgreSQL)
 - Paid audit purchase per selected search
 - Admin operations console
 - PDF export for free and paid flows
+- Same-domain company/legal pages with direct routes
+- Shared footer and floating WhatsApp CTA
 - Anonymous search limiting by IP
 - Search result stability cache for repeat checks
 - Confidence-based Google profile matching
@@ -113,12 +118,19 @@ aidbro-health-tool/
     env.example
   frontend/
     admin/
+    about-us/
     auth/
+    contact-us/
     login/
     portal/
+    privacy-policy/
+    public/
     register/
+    return-policy/
     src/
+    terms-and-conditions/
     upgrade/
+    aidbroai-logo.png
     admin.html
     index.html
     package.json
@@ -198,6 +210,7 @@ The React frontend contains both the public client app and the admin app.
 | [frontend/index.html](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\index.html) | Main public app entry HTML |
 | [frontend/admin.html](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin.html) | Admin app entry HTML |
 | [frontend/.env.example](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\.env.example) | Frontend environment template |
+| [frontend/aidbroai-logo.png](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\aidbroai-logo.png) | Main logo asset used across the public frontend |
 
 #### `frontend/src/`
 
@@ -208,6 +221,7 @@ The React frontend contains both the public client app and the admin app.
 | [frontend/src/main.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\main.jsx) | Main React bootstrapping entry |
 | [frontend/src/App.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\App.jsx) | Route-level app switching between free audit, auth, portal, and upgrade flows |
 | [frontend/src/config/api.js](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\config\api.js) | API base configuration for local and deployed environments |
+| [frontend/src/content/siteContent.js](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\content\siteContent.js) | Central source for policy/company-page content, contact details, and footer links |
 | [frontend/src/context/AuthContext.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\context\AuthContext.jsx) | Auth state, token storage, and authenticated fetch helper |
 
 ##### Pages
@@ -216,6 +230,7 @@ The React frontend contains both the public client app and the admin app.
 |---|---|
 | [frontend/src/pages/AuthPage.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\pages\AuthPage.jsx) | Login and registration UI |
 | [frontend/src/pages/AuthCallbackPage.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\pages\AuthCallbackPage.jsx) | Google OAuth callback handler |
+| [frontend/src/pages/InfoPage.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\pages\InfoPage.jsx) | Shared renderer for About, Privacy, Terms, Return Policy, and Contact pages |
 | [frontend/src/pages/PaymentPage.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\pages\PaymentPage.jsx) | Detailed audit purchase flow |
 | [frontend/src/pages/ClientPortal.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\pages\ClientPortal.jsx) | Saved searches, paid audit status, reports, and download actions |
 
@@ -225,6 +240,9 @@ The React frontend contains both the public client app and the admin app.
 |---|---|
 | [frontend/src/components/SearchForm.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\SearchForm.jsx) | Public input form for business audits |
 | [frontend/src/components/ResultsDashboard.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\ResultsDashboard.jsx) | Main results view, premium gating, live warnings, social improvement, and PDF action |
+| [frontend/src/components/SiteLogo.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\SiteLogo.jsx) | Shared logo renderer used across public pages |
+| [frontend/src/components/SiteFooter.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\SiteFooter.jsx) | Shared footer with internal policy links and contact details |
+| [frontend/src/components/FloatingWhatsApp.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\FloatingWhatsApp.jsx) | Persistent floating WhatsApp button for public pages |
 | [frontend/src/components/SeoReport.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\SeoReport.jsx) | SEO crawler report UI |
 | [frontend/src/components/CompetitorTable.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\CompetitorTable.jsx) | Paid competitor and keyword gap presentation |
 | [frontend/src/components/SocialImprove.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\SocialImprove.jsx) | Manual social link correction and re-audit |
@@ -274,6 +292,10 @@ The internal admin frontend runs separately from the public app.
 #### `frontend/auth/`, `frontend/login/`, `frontend/register/`, `frontend/portal/`, `frontend/upgrade/`
 
 These folders contain HTML entry points so direct URLs like `/auth`, `/register`, `/portal`, and `/upgrade` work correctly in Vite's multi-page setup.
+
+#### `frontend/about-us/`, `frontend/privacy-policy/`, `frontend/terms-and-conditions/`, `frontend/return-policy/`, `frontend/contact-us/`
+
+These folders contain HTML entry points for the internal website pages so those routes work directly in development, build output, and production hosting without redirecting to another website.
 
 ### `test/`
 
@@ -364,6 +386,13 @@ All backend routes are mounted under `/api`.
 
 - Detailed audit purchases are linked to a specific search, not just to the overall account
 - Portal status, report view, and report PDF actions are resolved per selected paid search
+
+### Public website shell
+
+- The public app now uses a shared logo component instead of text-only brand text
+- Parent-site/company-site redirects in the main navigation were removed
+- About, Privacy Policy, Terms and Conditions, Return Policy, and Contact Us now live on the same Aidbro domain
+- A shared footer and floating WhatsApp action are available across the public-facing pages
 
 ### Scoring model
 
