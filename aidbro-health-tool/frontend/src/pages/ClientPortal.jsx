@@ -93,6 +93,17 @@ function SnapshotPillarCard({ pillar }) {
   )
 }
 
+function PdfButtonLabel({ loading, text }) {
+  return loading ? (
+    <>
+      <span className="btn-loading-spinner" aria-hidden="true" />
+      {text}
+    </>
+  ) : (
+    <>📄 {text}</>
+  )
+}
+
 function SearchHistoryCard({
   search,
   loading,
@@ -385,7 +396,9 @@ function SearchSnapshot({ snapshot, onUpgrade, onOpenAudit, onDownloadPdf, pdfLo
                   <div className="check-item pass">
                     <div className="check-content">
                       <div className="check-name pass">Website</div>
-                      <div className="check-msg">{competitor.website_url || "Not listed"}</div>
+                      <div className="check-msg snapshot-competitor-url">
+                        {competitor.website_url || "Not listed"}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -463,7 +476,7 @@ function SearchSnapshot({ snapshot, onUpgrade, onOpenAudit, onDownloadPdf, pdfLo
         </div>
         <div className="results-footer-cta-actions">
           <button className="pdf-btn" onClick={() => onDownloadPdf(snapshot)} disabled={pdfLoading}>
-            {pdfLoading ? "Generating PDF..." : "Download PDF"}
+            <PdfButtonLabel loading={pdfLoading} text={pdfLoading ? "Generating PDF..." : "Download PDF"} />
           </button>
           {hasLinkedAudit ? (
             <button className="btn-primary" onClick={() => onOpenAudit(snapshot.search)}>
@@ -489,6 +502,7 @@ export default function ClientPortal({ onLogout }) {
   const [report, setReport] = useState(null)
   const [reportLoading, setReportLoading] = useState(false)
   const [snapshotPdfLoading, setSnapshotPdfLoading] = useState(false)
+  const [portalPdfLoading, setPortalPdfLoading] = useState(false)
   const [error, setError] = useState("")
   const [snapshot, setSnapshot] = useState(null)
   const [snapshotLoadingId, setSnapshotLoadingId] = useState(null)
@@ -623,6 +637,7 @@ export default function ClientPortal({ onLogout }) {
   }
 
   const handleDownloadPDF = async (searchId = selectedAuditSearchId) => {
+    setPortalPdfLoading(true)
     try {
       const suffix = searchId ? `?search_id=${searchId}` : ""
       const res = await authFetch(`${API}/portal/report/pdf${suffix}`)
@@ -639,6 +654,8 @@ export default function ClientPortal({ onLogout }) {
       URL.revokeObjectURL(url)
     } catch {
       setError("PDF download failed.")
+    } finally {
+      setPortalPdfLoading(false)
     }
   }
 
@@ -777,8 +794,8 @@ export default function ClientPortal({ onLogout }) {
                 >
                   {reportLoading ? "Loading..." : "View Report"}
                 </button>
-                <button className="pdf-btn" onClick={handleDownloadPDF}>
-                  Download PDF
+                <button className="pdf-btn" onClick={handleDownloadPDF} disabled={portalPdfLoading}>
+                  <PdfButtonLabel loading={portalPdfLoading} text={portalPdfLoading ? "Preparing PDF..." : "Download PDF"} />
                 </button>
               </>
             )}
@@ -1074,8 +1091,8 @@ export default function ClientPortal({ onLogout }) {
                 <p>Download the complete PDF or discuss the recommendations with our team.</p>
               </div>
               <div className="results-footer-cta-actions">
-                <button className="pdf-btn" onClick={handleDownloadPDF}>
-                  Download PDF
+                <button className="pdf-btn" onClick={handleDownloadPDF} disabled={portalPdfLoading}>
+                  <PdfButtonLabel loading={portalPdfLoading} text={portalPdfLoading ? "Preparing PDF..." : "Download PDF"} />
                 </button>
                 <a
                   href="https://wa.me/918589999362?text=Hi, I have reviewed my report and would like to discuss the recommendations."

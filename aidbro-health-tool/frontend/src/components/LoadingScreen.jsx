@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import loadingVideo from "../../loading_screen.mp4"
 
 const STEPS = [
   "Searching Google Business Profile...",
@@ -21,7 +22,14 @@ export default function LoadingScreen() {
 
   return (
     <div className="loading-screen">
-      <div className="loading-orb" />
+      <video
+        className="loading-video"
+        src={loadingVideo}
+        autoPlay
+        loop
+        muted
+        playsInline
+      />
       <div className="loading-steps">
         <h3>Auditing Your Business</h3>
         <div style={{ height: 28, overflow: "hidden" }}>

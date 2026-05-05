@@ -13,11 +13,19 @@ import FloatingWhatsApp from "./components/FloatingWhatsApp"
 import { SITE_PAGES } from "./content/siteContent"
 import { API } from "./config/api"
 
-function PublicShell({ children, showFooter = true, showWhatsApp = true }) {
+function PublicShell({
+  children,
+  showFooter = true,
+  showWhatsApp = true,
+  showPattern = true,
+}) {
   return (
-    <div className="app-root">
-      <div className="bg-grid" />
-      <div className="bg-glow" />
+    <div
+      className="app-root"
+      style={showPattern ? undefined : { background: "#030714" }}
+    >
+      {showPattern && <div className="bg-grid" />}
+      {showPattern && <div className="bg-glow" />}
       {children}
       {showFooter && <SiteFooter />}
       {showWhatsApp && <FloatingWhatsApp />}
@@ -31,7 +39,7 @@ function InnerApp() {
 
   if (loading) {
     return (
-      <PublicShell>
+      <PublicShell showFooter={false} showWhatsApp={false} showPattern={false}>
         <div
           style={{
             display: "flex",
@@ -124,11 +132,7 @@ function InnerApp() {
     )
   }
 
-  return (
-    <PublicShell>
-      <FreeAuditApp />
-    </PublicShell>
-  )
+  return <FreeAuditApp />
 }
 
 function FreeAuditApp() {
@@ -204,25 +208,37 @@ function FreeAuditApp() {
 
   return (
     <>
-      {state === "idle" && <SearchForm onSearch={handleSearch} />}
-      {state === "loading" && <LoadingScreen />}
+      {state === "idle" && (
+        <PublicShell>
+          <SearchForm onSearch={handleSearch} />
+        </PublicShell>
+      )}
+      {state === "loading" && (
+        <PublicShell showFooter={false} showWhatsApp={false} showPattern={false}>
+          <LoadingScreen />
+        </PublicShell>
+      )}
       {state === "results" && results && (
-        <ResultsDashboard data={results} leadId={leadId} searchId={searchId} onReset={handleReset} />
+        <PublicShell showFooter={false}>
+          <ResultsDashboard data={results} leadId={leadId} searchId={searchId} onReset={handleReset} />
+        </PublicShell>
       )}
       {state === "error" && (
-        <div className="error-screen">
-          <div className="error-card">
-            <span className="error-icon">!</span>
-            <h2>Something went wrong</h2>
-            <p>{error}</p>
-            {limitBlocked && !isAuthenticated && (
-              <a href="/auth" className="btn-primary" style={{ marginBottom: 12 }}>
-                Login to Continue
-              </a>
-            )}
-            <button className="btn-primary" onClick={handleReset}>Try Again</button>
+        <PublicShell>
+          <div className="error-screen">
+            <div className="error-card">
+              <span className="error-icon">!</span>
+              <h2>Something went wrong</h2>
+              <p>{error}</p>
+              {limitBlocked && !isAuthenticated && (
+                <a href="/auth" className="btn-primary" style={{ marginBottom: 12 }}>
+                  Login to Continue
+                </a>
+              )}
+              <button className="btn-primary" onClick={handleReset}>Try Again</button>
+            </div>
           </div>
-        </div>
+        </PublicShell>
       )}
     </>
   )

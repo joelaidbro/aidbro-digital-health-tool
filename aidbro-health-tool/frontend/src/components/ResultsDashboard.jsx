@@ -13,6 +13,17 @@ import { API } from "../config/api"
 const C = { green: "var(--green)", yellow: "var(--yellow)", red: "var(--red)" }
 const pc = color => C[color] || "var(--gray)"
 
+function PdfButtonLabel({ loading, text }) {
+  return loading ? (
+    <>
+      <span className="btn-loading-spinner" aria-hidden="true" />
+      {text}
+    </>
+  ) : (
+    <>📄 {text}</>
+  )
+}
+
 function CheckRow({ check }) {
   if (check.skipped && check.points_max === 0) return null
   const passed = check.passed
@@ -266,7 +277,7 @@ export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
         </a>
         <div className="results-topbar-actions">
           <button className="pdf-btn" onClick={handleDownloadPDF} disabled={pdfLoading}>
-            📄 {pdfLoading ? "Generating..." : "Download PDF"}
+            <PdfButtonLabel loading={pdfLoading} text={pdfLoading ? "Generating PDF..." : "Download PDF"} />
           </button>
           <button className="btn-ghost" onClick={onReset}>← New Search</button>
           {!isAuthenticated ? (
@@ -573,7 +584,9 @@ export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
                 <p>Check your portal for the full detailed report.</p>
               </div>
               <div className="results-footer-cta-actions">
-                <button className="pdf-btn" onClick={handleDownloadPDF}>📄 Download PDF</button>
+                <button className="pdf-btn" onClick={handleDownloadPDF} disabled={pdfLoading}>
+                  <PdfButtonLabel loading={pdfLoading} text={pdfLoading ? "Generating PDF..." : "Download PDF"} />
+                </button>
                 <a href="/portal" className="btn-primary">📊 View My Portal</a>
               </div>
             </>
@@ -592,7 +605,9 @@ export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
                 </div>
               </div>
               <div className="results-footer-cta-actions">
-                <button className="pdf-btn" onClick={handleDownloadPDF}>📄 Free PDF</button>
+                <button className="pdf-btn" onClick={handleDownloadPDF} disabled={pdfLoading}>
+                  <PdfButtonLabel loading={pdfLoading} text={pdfLoading ? "Generating PDF..." : "Free PDF"} />
+                </button>
                 <a href={isAuthenticated ? "/upgrade" : "/auth"} className="btn-primary">
                   {isAuthenticated ? "⭐ Get Detailed Audit →" : "🔑 Register & Unlock →"}
                 </a>

@@ -6,6 +6,7 @@ Fixed: Table style applied before KeepTogether wrapping
 """
 
 import io
+import os
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -15,6 +16,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table,
     TableStyle, HRFlowable, KeepTogether, PageBreak
 )
+from reportlab.platypus import Image as RLImage
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 
 # ── Brand palette ─────────────────────────────────────────────────────────────
@@ -35,6 +37,9 @@ ORANGE_DIM  = colors.HexColor("#2A1800")
 W, H   = A4
 MARGIN = 14 * mm
 CW     = W - 2 * MARGIN
+LOGO_PATH = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "aidbroai-logo.png")
+)
 
 
 def _c(color_key):
@@ -67,6 +72,12 @@ def _styled_table(data, col_widths, style_cmds):
     t = Table(data, colWidths=col_widths)
     t.setStyle(TableStyle(style_cmds))
     return t
+
+
+def _logo_flowable(brand_style):
+    if os.path.exists(LOGO_PATH):
+        return RLImage(LOGO_PATH, width=48 * mm, height=14 * mm, mask="auto")
+    return Paragraph("AIDBRO", brand_style)
 
 
 def generate_pdf(
@@ -103,7 +114,7 @@ def generate_pdf(
 
     # ── HEADER ────────────────────────────────────────────────────────────────
     hdr = _styled_table(
-        [[Paragraph("AIDBRO", st["brand"]),
+        [[_logo_flowable(st["brand"]),
           Paragraph(
               f"<b>Digital Health Report</b><br/>"
               f"<font size=7 color='#A0AEC0'>Reals Digital Innovations · {date}</font>",
