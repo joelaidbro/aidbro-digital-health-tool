@@ -7,6 +7,7 @@ The project currently includes:
 - A public audit tool for free digital health checks
 - Custom Aidbro branding with site logo, footer, and floating WhatsApp action
 - Internal About, Privacy Policy, Terms, Return Policy, and Contact pages hosted on the same domain
+- A dedicated branded loading screen with embedded video animation
 - Google Places and PageSpeed based website/profile analysis
 - SEO crawl, social detection, competitor snapshot, and AI insights
 - Required mobile capture with country-code aware validation
@@ -73,6 +74,7 @@ Database (PostgreSQL)
 - Confidence-based Google profile matching
 - Search-specific paid audit status and report access in the portal
 - Full audit snapshot viewing inside admin detail screens
+- Branded PDF generation with visible loading feedback on download actions
 
 ## 4. Tech Stack
 
@@ -101,6 +103,7 @@ Database (PostgreSQL)
 - Groq SDK
 - ReportLab
 - Pillow
+- Sentry SDK
 - python-dotenv
 - Pydantic
 
@@ -131,6 +134,7 @@ aidbro-health-tool/
     terms-and-conditions/
     upgrade/
     aidbroai-logo.png
+    loading_screen.mp4
     admin.html
     index.html
     package.json
@@ -211,6 +215,7 @@ The React frontend contains both the public client app and the admin app.
 | [frontend/admin.html](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin.html) | Admin app entry HTML |
 | [frontend/.env.example](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\.env.example) | Frontend environment template |
 | [frontend/aidbroai-logo.png](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\aidbroai-logo.png) | Main logo asset used across the public frontend |
+| [frontend/loading_screen.mp4](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\loading_screen.mp4) | Video asset used in the public audit loading state |
 
 #### `frontend/src/`
 
@@ -219,7 +224,7 @@ The React frontend contains both the public client app and the admin app.
 | File | Purpose |
 |---|---|
 | [frontend/src/main.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\main.jsx) | Main React bootstrapping entry |
-| [frontend/src/App.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\App.jsx) | Route-level app switching between free audit, auth, portal, and upgrade flows |
+| [frontend/src/App.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\App.jsx) | Route-level app switching between free audit, auth, portal, and upgrade flows, including public-shell/footer behavior per state |
 | [frontend/src/config/api.js](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\config\api.js) | API base configuration for local and deployed environments |
 | [frontend/src/content/siteContent.js](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\content\siteContent.js) | Central source for policy/company-page content, contact details, and footer links |
 | [frontend/src/context/AuthContext.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\context\AuthContext.jsx) | Auth state, token storage, and authenticated fetch helper |
@@ -239,7 +244,7 @@ The React frontend contains both the public client app and the admin app.
 | File | Purpose |
 |---|---|
 | [frontend/src/components/SearchForm.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\SearchForm.jsx) | Public input form for business audits |
-| [frontend/src/components/ResultsDashboard.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\ResultsDashboard.jsx) | Main results view, premium gating, live warnings, social improvement, and PDF action |
+| [frontend/src/components/ResultsDashboard.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\ResultsDashboard.jsx) | Main results view, premium gating, live warnings, social improvement, and PDF download state handling |
 | [frontend/src/components/SiteLogo.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\SiteLogo.jsx) | Shared logo renderer used across public pages |
 | [frontend/src/components/SiteFooter.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\SiteFooter.jsx) | Shared footer with internal policy links and contact details |
 | [frontend/src/components/FloatingWhatsApp.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\FloatingWhatsApp.jsx) | Persistent floating WhatsApp button for public pages |
@@ -250,7 +255,7 @@ The React frontend contains both the public client app and the admin app.
 | [frontend/src/components/ScoreRing.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\ScoreRing.jsx) | Circular score display |
 | [frontend/src/components/PillarChart.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\PillarChart.jsx) | Pillar comparison summary chart |
 | [frontend/src/components/useAuditPrice.js](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\useAuditPrice.js) | Price fetch helper from backend payment status |
-| [frontend/src/components/LoadingScreen.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\LoadingScreen.jsx) | Audit loading state |
+| [frontend/src/components/LoadingScreen.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\components\LoadingScreen.jsx) | Audit loading state with rotating audit steps and embedded video animation |
 
 ##### Styles
 
@@ -393,6 +398,8 @@ All backend routes are mounted under `/api`.
 - Parent-site/company-site redirects in the main navigation were removed
 - About, Privacy Policy, Terms and Conditions, Return Policy, and Contact Us now live on the same Aidbro domain
 - A shared footer and floating WhatsApp action are available across the public-facing pages
+- The free-audit loading state uses a dedicated plain background shell without footer or WhatsApp clutter
+- The free-audit results state also suppresses the footer so modal/overlay content does not collide with the bottom layout
 
 ### Scoring model
 
@@ -404,6 +411,13 @@ All backend routes are mounted under `/api`.
 
 - Identical searches may reuse the most recent audit snapshot for up to 24 hours
 - This reduces visible score drift caused by live third-party data volatility
+
+### Loading and document UX
+
+- The free-audit loading screen uses `frontend/loading_screen.mp4` instead of the older orb-only loader
+- The loading shell uses a dedicated plain dark background rather than the patterned homepage background
+- PDF download actions in results and portal views show an active loading state so users know generation is in progress
+- Generated PDFs now use the Aidbro logo image in the header instead of plain text branding when the asset is available
 
 ### Google profile safety
 
@@ -434,6 +448,7 @@ Use [backend/env.example](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-
 - `GOOGLE_CLIENT_SECRET`
 - `GROQ_API_KEY`
 - `DATABASE_URL`
+- `SENTRY_DSN`
 - `RAZORPAY_KEY_ID`
 - `RAZORPAY_KEY_SECRET`
 - `RAZORPAY_WEBHOOK_SECRET`
@@ -453,6 +468,13 @@ Use [backend/env.example](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-
 
 - `VITE_API_BASE_URL`
 - `VITE_BACKEND_DEV_PROXY_TARGET`
+- `VITE_SENTRY_DSN`
+
+### Error monitoring
+
+- Backend Sentry initializes only when `ENVIRONMENT=production` and `SENTRY_DSN` is set
+- Frontend Sentry initializes only when `VITE_SENTRY_DSN` exists and is non-empty
+- Local development can omit both values entirely without partial initialization or missing-DSN warnings
 
 ## 11. Local Development Setup
 

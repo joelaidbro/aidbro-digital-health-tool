@@ -11,6 +11,17 @@ from routes.payment import router as payment_router
 from routes.portal  import router as portal_router
 from database.connection import create_tables, test_connection
 
+if os.getenv("ENVIRONMENT") == "production":
+    sentry_dsn = os.getenv("SENTRY_DSN", "").strip()
+    if sentry_dsn:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[FastApiIntegration()],
+        )
+
 
 def _load_allowed_origins() -> list[str]:
     configured = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
