@@ -58,6 +58,8 @@ app = FastAPI(
     description="AI-powered digital presence analyzer + Stage 4 premium system",
     version="3.0.0",
     lifespan=lifespan,
+    docs_url=None if os.getenv("ENVIRONMENT") == "production" else "/docs",
+    redoc_url=None if os.getenv("ENVIRONMENT") == "production" else "/redoc",
 )
 
 app.add_middleware(
