@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.connection import get_db
 from database import crud
 from database.models import AuditClient
+from main import limiter
 from utils.auth_utils import (
     hash_password, verify_password,
     create_access_token, create_refresh_token,
@@ -119,7 +120,8 @@ async def _ensure_shadow_client(
 # ── EMAIL / PASSWORD REGISTER ─────────────────────────────────────────────────
 
 @router.post("/auth/register")
-async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def register(request: Request, req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     """
     Register a new client account.
     Creates account but no paid access yet — payment unlocks the portal.
@@ -165,7 +167,8 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
 # ── EMAIL / PASSWORD LOGIN ────────────────────────────────────────────────────
 
 @router.post("/auth/login")
-async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, req: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = await crud.get_user_by_email(db, req.email)
 
     if user and user.password_hash:
@@ -394,7 +397,8 @@ async def logout(response: Response):
 # ── ADMIN LOGIN ───────────────────────────────────────────────────────────────
 
 @router.post("/auth/admin/login")
-async def admin_login(req: AdminLoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("3 per 5 minutes")
+async def admin_login(request: Request, req: AdminLoginRequest, db: AsyncSession = Depends(get_db)):
     admin = await crud.get_admin_by_email(db, req.email)
     if not admin or not admin.is_active:
         raise HTTPException(401, "Invalid credentials.")

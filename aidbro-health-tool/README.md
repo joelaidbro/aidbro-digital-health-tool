@@ -96,6 +96,8 @@ Database (PostgreSQL)
 - python-jose
 - passlib
 - Razorpay Python SDK
+- SlowAPI
+- limits
 - httpx
 - requests
 - BeautifulSoup4
@@ -154,7 +156,7 @@ The FastAPI server, business logic, database models, and audit services live her
 
 | File | Purpose |
 |---|---|
-| [backend/main.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\main.py) | FastAPI entry point, CORS setup, startup lifecycle, and route registration |
+| [backend/main.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\main.py) | FastAPI entry point, Sentry / rate-limit bootstrap, CORS setup, startup lifecycle, and route registration |
 | [backend/requirements.txt](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\requirements.txt) | Python dependency list |
 | [backend/env.example](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\env.example) | Backend environment variable template |
 | `backend/.env` | Local or server runtime secrets. Do not commit this file |
@@ -172,7 +174,7 @@ The FastAPI server, business logic, database models, and audit services live her
 | File | Purpose |
 |---|---|
 | [backend/routes/audit.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\routes\audit.py) | Main audit execution, free PDF generation, anonymous limits, 24-hour score cache |
-| [backend/routes/auth.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\routes\auth.py) | Email/password auth, Google OAuth, admin login |
+| [backend/routes/auth.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\routes\auth.py) | Email/password auth, Google OAuth, admin login, and auth endpoint rate limits |
 | [backend/routes/payment.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\routes\payment.py) | Razorpay order creation, payment verification, webhook handling, payment status |
 | [backend/routes/portal.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\routes\portal.py) | Client portal APIs for history, audit status, reports, and PDFs |
 | [backend/routes/admin.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\routes\admin.py) | Admin dashboard, users, anonymous searches, legacy leads, audit queue, analytics |
@@ -376,6 +378,13 @@ All backend routes are mounted under `/api`.
 - Anonymous users can run 2 audits per IP in a rolling 7-day window
 - Logged-in users are currently unlimited
 
+### Authentication protection
+
+- `POST /api/auth/login` is limited to 5 requests per minute per IP
+- `POST /api/auth/register` is limited to 10 requests per minute per IP
+- `POST /api/auth/admin/login` is limited to 3 requests per 5 minutes per IP
+- Exceeded auth limits return: `Too many attempts, please try again later.`
+
 ### Contact capture
 
 - A mobile number is required on the public audit form
@@ -476,6 +485,11 @@ Use [backend/env.example](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-
 - Frontend Sentry initializes only when `VITE_SENTRY_DSN` exists and is non-empty
 - Local development can omit both values entirely without partial initialization or missing-DSN warnings
 
+### Production API docs behavior
+
+- When `ENVIRONMENT=production`, FastAPI disables both `/docs` and `/redoc`
+- In non-production environments, the docs remain available normally for local development and debugging
+
 ## 11. Local Development Setup
 
 ### Backend
@@ -541,7 +555,8 @@ Recommended production shape:
 
 - Frontend served from `https://ai.aidbro.com`
 - Backend served internally on `127.0.0.1:8000`
-- `/api`, `/docs`, and `/openapi.json` proxied by OpenLiteSpeed
+- `/api` and `/openapi.json` proxied by OpenLiteSpeed
+- `/docs` and `/redoc` are available only outside production because production disables FastAPI docs at app level
 
 ## 13. Files and Folders That Should Not Be Committed
 
@@ -574,7 +589,15 @@ Recommended production shape:
 - Add monitoring and error logging for external API failures
 - Add proper automated tests for payment, portal, and admin flows
 
-## 16. Ownership Note
+## 16. Recent Action History
+
+- Added production-gated backend Sentry initialization using `SENTRY_DSN`
+- Added frontend Sentry initialization gated by `VITE_SENTRY_DSN`
+- Disabled FastAPI `/docs` and `/redoc` automatically when `ENVIRONMENT=production`
+- Added SlowAPI + `limits` based IP rate limiting for register, login, and admin login endpoints
+- Reordered backend startup so the FastAPI app, limiter state, and rate-limit handler are initialized before route imports and router inclusion
+
+## 17. Ownership Note
 
 This README is intended as a working technical guide for development, deployment, debugging, and team handover. Keep it updated whenever:
 
