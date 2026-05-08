@@ -79,6 +79,7 @@ jobs:
             pip install -r requirements.txt
 
             python -c "import asyncio; from database.connection import create_tables; asyncio.run(create_tables())"
+            alembic upgrade head
 
             cd "$FRONTEND_DIR"
             npm ci

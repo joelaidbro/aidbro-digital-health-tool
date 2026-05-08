@@ -68,6 +68,8 @@ async def lifespan(app: FastAPI):
     print("[Aidbro] Starting up...")
     db_ok = await test_connection()
     if db_ok:
+        # This is kept as a safety net for local development only.
+        # In production, Alembic handles all schema changes via the CI/CD pipeline.
         await create_tables()
     else:
         print("[Aidbro] WARNING: DB unavailable — some features won't work")
