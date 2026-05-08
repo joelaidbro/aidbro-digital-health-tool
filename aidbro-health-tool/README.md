@@ -114,10 +114,12 @@ Database (PostgreSQL)
 ```text
 aidbro-health-tool/
   backend/
+    alembic/
     database/
     routes/
     services/
     utils/
+    alembic.ini
     main.py
     requirements.txt
     env.example
@@ -157,9 +159,17 @@ The FastAPI server, business logic, database models, and audit services live her
 | File | Purpose |
 |---|---|
 | [backend/main.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\main.py) | FastAPI entry point, Sentry / rate-limit bootstrap, CORS setup, startup lifecycle, and route registration |
+| [backend/alembic.ini](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\alembic.ini) | Alembic configuration file wired to the app's `DATABASE_URL` |
 | [backend/requirements.txt](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\requirements.txt) | Python dependency list |
 | [backend/env.example](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\env.example) | Backend environment variable template |
 | `backend/.env` | Local or server runtime secrets. Do not commit this file |
+
+#### `backend/alembic/`
+
+| File | Purpose |
+|---|---|
+| [backend/alembic/env.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\alembic\env.py) | Alembic environment config that loads `DATABASE_URL`, imports models, and points autogeneration to `Base.metadata` |
+| [backend/alembic/versions/1ef0f2dc05b1_initial_schema.py](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\backend\alembic\versions\1ef0f2dc05b1_initial_schema.py) | Initial Alembic baseline revision generated from the current schema state |
 
 #### `backend/database/`
 
@@ -316,6 +326,8 @@ This folder contains standalone backend validation scripts.
 ## 7. Database Model Summary
 
 The current schema is built in SQLAlchemy and includes both newer search-centric structures and some legacy lead/payment structures.
+
+Alembic is now initialized for schema management. The first generated revision is a baseline snapshot and was intentionally not applied automatically during setup review.
 
 Main entity groups:
 
@@ -485,6 +497,14 @@ Use [backend/env.example](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-
 - Frontend Sentry initializes only when `VITE_SENTRY_DSN` exists and is non-empty
 - Local development can omit both values entirely without partial initialization or missing-DSN warnings
 
+### Database schema management
+
+- Alembic is initialized in `backend/alembic/`
+- Alembic reads the same `DATABASE_URL` environment variable used by the main app
+- `backend/alembic/env.py` imports `database.models` and uses `Base.metadata` from `database.connection`
+- The generated baseline migration file is `1ef0f2dc05b1_initial_schema.py`
+- `create_tables()` still runs at startup as a local-development safety net, but production schema changes are intended to go through Alembic
+
 ### Production API docs behavior
 
 - When `ENVIRONMENT=production`, FastAPI disables both `/docs` and `/redoc`
@@ -550,6 +570,7 @@ Current deployment model is designed for:
 - PostgreSQL on the VPS
 - FastAPI backend behind reverse proxy
 - Static frontend build served from `public_html`
+- GitHub Actions based deploy automation
 
 Recommended production shape:
 
@@ -557,6 +578,7 @@ Recommended production shape:
 - Backend served internally on `127.0.0.1:8000`
 - `/api` and `/openapi.json` proxied by OpenLiteSpeed
 - `/docs` and `/redoc` are available only outside production because production disables FastAPI docs at app level
+- CI/CD now runs `alembic upgrade head` on the VPS after the new code is pulled and before the backend service is restarted
 
 ## 13. Files and Folders That Should Not Be Committed
 
@@ -575,7 +597,7 @@ Recommended production shape:
 
 ## 14. Known Technical Notes
 
-- The database currently uses SQLAlchemy models plus startup `create_tables()`. Alembic is installed but not fully set up yet for structured schema migration history.
+- The database still keeps startup `create_tables()` as a safety net for local development, but Alembic is now the intended production schema-management path.
 - Some legacy `Lead` / `AuditClient` paths still exist alongside newer `Search` / `AuditJob` flows.
 - The project has gone through several iterations, so some CSS and older components still include legacy styling layers.
 - The frontend is multi-page Vite, not a React Router SPA.
@@ -596,6 +618,10 @@ Recommended production shape:
 - Disabled FastAPI `/docs` and `/redoc` automatically when `ENVIRONMENT=production`
 - Added SlowAPI + `limits` based IP rate limiting for register, login, and admin login endpoints
 - Reordered backend startup so the FastAPI app, limiter state, and rate-limit handler are initialized before route imports and router inclusion
+- Initialized Alembic in `backend/` and wired it to `DATABASE_URL`, `database.models`, and `Base.metadata`
+- Generated the initial Alembic baseline revision from the current schema state
+- Updated the GitHub Actions deployment workflow to run `alembic upgrade head` before restarting the backend service
+- Documented the startup `create_tables()` call as a local-development safety net rather than the primary production migration path
 
 ## 17. Ownership Note
 
