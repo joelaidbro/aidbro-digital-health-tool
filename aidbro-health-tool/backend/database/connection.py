@@ -64,6 +64,8 @@ async def get_db() -> AsyncSession:
 
 
 # ── Create all tables (called on startup) ─────────────────────────────────────
+# Kept for local development only. In production, schema changes should be
+# managed through Alembic migrations.
 async def create_tables():
     """Create all tables defined in models.py if they don't exist."""
     from database import models  # noqa: F401 — import to register models
