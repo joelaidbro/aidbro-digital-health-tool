@@ -237,6 +237,7 @@ The React frontend contains both the public client app and the admin app.
 |---|---|
 | [frontend/src/main.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\main.jsx) | Main React bootstrapping entry |
 | [frontend/src/App.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\App.jsx) | Route-level app switching between free audit, auth, portal, and upgrade flows, including public-shell/footer behavior per state |
+| [frontend/src/features.css](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\features.css) | Merged feature-layer stylesheet that combines the former additions and additions_v2 UI rules |
 | [frontend/src/config/api.js](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\config\api.js) | API base configuration for local and deployed environments |
 | [frontend/src/content/siteContent.js](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\content\siteContent.js) | Central source for policy/company-page content, contact details, and footer links |
 | [frontend/src/context/AuthContext.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\context\AuthContext.jsx) | Auth state, token storage, and authenticated fetch helper |
@@ -274,9 +275,7 @@ The React frontend contains both the public client app and the admin app.
 | File | Purpose |
 |---|---|
 | [frontend/src/index.css](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\index.css) | Main visual system and most client UI styles |
-| [frontend/src/App.css](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\App.css) | App shell styles |
-| [frontend/src/additions.css](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\additions.css) | Supplemental styling from earlier iterations |
-| [frontend/src/additions_v2.css](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\additions_v2.css) | Additional UI refinements, especially around results/social flows |
+| [frontend/src/features.css](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\features.css) | Consolidated feature stylesheet that preserves the full contents of the former additions.css and additions_v2.css layers |
 | [frontend/src/stage4.css](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\src\stage4.css) | Portal / payment / Stage 4 related styling |
 
 #### `frontend/admin/`
@@ -286,7 +285,7 @@ The internal admin frontend runs separately from the public app.
 | File | Purpose |
 |---|---|
 | [frontend/admin/main.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\main.jsx) | Admin React entry |
-| [frontend/admin/AdminApp.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\AdminApp.jsx) | Admin shell, auth state, sidebar, page switching |
+| [frontend/admin/AdminApp.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\AdminApp.jsx) | Admin shell, auth state, sidebar, page switching, and full-page list/detail navigation behavior |
 | [frontend/admin/admin.css](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\admin.css) | Admin styles |
 
 ##### Admin pages
@@ -296,11 +295,11 @@ The internal admin frontend runs separately from the public app.
 | [frontend/admin/pages/AdminLogin.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\AdminLogin.jsx) | Admin login form |
 | [frontend/admin/pages/Analytics.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\Analytics.jsx) | Admin dashboard metrics and alerts |
 | [frontend/admin/pages/AnonymousSearches.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\AnonymousSearches.jsx) | Anonymous-search monitoring |
-| [frontend/admin/pages/AnonymousSearchDetail.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\AnonymousSearchDetail.jsx) | Detail view for anonymous searches |
+| [frontend/admin/pages/AnonymousSearchDetail.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\AnonymousSearchDetail.jsx) | Full-page detail view for anonymous searches with back navigation |
 | [frontend/admin/pages/UsersTable.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\UsersTable.jsx) | Registered-user listing |
-| [frontend/admin/pages/UserDetail.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\UserDetail.jsx) | Registered-user detail and activity view |
+| [frontend/admin/pages/UserDetail.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\UserDetail.jsx) | Full-page registered-user detail and activity view with back navigation |
 | [frontend/admin/pages/LeadsTable.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\LeadsTable.jsx) | Legacy leads CRM list |
-| [frontend/admin/pages/LeadDetail.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\LeadDetail.jsx) | Legacy lead detail view |
+| [frontend/admin/pages/LeadDetail.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\LeadDetail.jsx) | Full-page legacy lead detail view with back navigation |
 | [frontend/admin/pages/AuditQueue.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\AuditQueue.jsx) | Paid audit queue |
 | [frontend/admin/pages/AuditEditor.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\AuditEditor.jsx) | Detailed audit workbench for analysts/managers |
 | [frontend/admin/pages/TeamManagement.jsx](D:\Joel\Job\AidBro\Business%20Digital%20Health\aidbro-health-tool\frontend\admin\pages\TeamManagement.jsx) | Admin account management |
@@ -331,15 +330,20 @@ Alembic is now initialized for schema management. The first generated revision i
 
 Main entity groups:
 
-- `Lead`: free-tool capture / legacy CRM layer
+- `Lead`: free-tool capture / legacy CRM layer, explicitly marked in code as a backward-compatibility model only
 - `User`: authenticated client account
-- `Search`: saved free audit search
+- `Search`: saved free audit search and the primary current model for new search-centric features
 - `PaymentOrder`: Razorpay order state
-- `AuditJob`: purchased detailed audit for a specific search
+- `AuditJob`: purchased detailed audit for a specific search and the primary current model for new paid-audit flows
 - `DetailedAudit`: admin-edited detailed audit workspace
-- `AuditClient`: legacy paid-client container still used by parts of the Stage 4 flow
+- `AuditClient`: legacy paid-client container still used by parts of the Stage 4 flow, explicitly marked in code as a backward-compatibility model only
 - `AdminUser`: admin login accounts
 - `UserActivityLog`: activity tracking
+
+Current model guidance in code:
+
+- `Lead` and `AuditClient` are marked as legacy models and should not be used for new features
+- `SearchRecord` and `AuditJob` are marked as the current models for all new feature work
 
 ## 8. API Groups
 
@@ -412,6 +416,12 @@ All backend routes are mounted under `/api`.
 
 - Detailed audit purchases are linked to a specific search, not just to the overall account
 - Portal status, report view, and report PDF actions are resolved per selected paid search
+
+### Admin workspace navigation
+
+- `Anonymous Searches`, `Registered Users`, and `Legacy Leads` now open detail screens as full-page replacements inside the main admin content area
+- The corresponding detail screens include highlighted back buttons that return the user to the list view
+- Initial entry into those sections keeps the list visible; detail views open only from an actual row click, not from automatic first-row preselection
 
 ### Public website shell
 
@@ -599,7 +609,7 @@ Recommended production shape:
 
 - The database still keeps startup `create_tables()` as a safety net for local development, but Alembic is now the intended production schema-management path.
 - Some legacy `Lead` / `AuditClient` paths still exist alongside newer `Search` / `AuditJob` flows.
-- The project has gone through several iterations, so some CSS and older components still include legacy styling layers.
+- The project has gone through several iterations, but the client-side feature styling has now been consolidated into `frontend/src/features.css`.
 - The frontend is multi-page Vite, not a React Router SPA.
 
 ## 15. Recommended Next Improvements
@@ -618,6 +628,13 @@ Recommended production shape:
 - Disabled FastAPI `/docs` and `/redoc` automatically when `ENVIRONMENT=production`
 - Added SlowAPI + `limits` based IP rate limiting for register, login, and admin login endpoints
 - Reordered backend startup so the FastAPI app, limiter state, and rate-limit handler are initialized before route imports and router inclusion
+- Initialized Alembic in `backend/`, wired it to `DATABASE_URL`, and generated the baseline `initial schema` revision
+- Updated CI/CD deployment so `alembic upgrade head` runs before the backend service restart
+- Marked `create_tables()` and its startup call as local-development safety nets, with Alembic documented as the production schema path
+- Consolidated the former `additions.css` and `additions_v2.css` files into `frontend/src/features.css` and removed unused `frontend/src/App.css`
+- Marked `Lead` and `AuditClient` as legacy models and `SearchRecord` / `AuditJob` as the current models for new feature work
+- Switched key admin list/detail sections from split panels to full-page replacement detail views with highlighted back navigation
+- Fixed the admin auto-open regression so anonymous, user, and legacy lead sections show their lists first on fresh open
 - Initialized Alembic in `backend/` and wired it to `DATABASE_URL`, `database.models`, and `Base.metadata`
 - Generated the initial Alembic baseline revision from the current schema state
 - Updated the GitHub Actions deployment workflow to run `alembic upgrade head` before restarting the backend service

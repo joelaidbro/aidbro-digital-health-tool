@@ -16,6 +16,7 @@ export default function UserDetail({
   token,
   userId,
   refreshKey,
+  onBack,
   onOpenAudit,
   onUnauthorized,
 }) {
@@ -99,11 +100,16 @@ export default function UserDetail({
           <h3>{user.name || user.email || "Registered User"}</h3>
           <p>{user.email || "No email"} · {(user.auth_provider || "email").toUpperCase()} login</p>
         </div>
-        {firstAuditJob?.legacy_client_id && (
-          <button className="btn-primary" onClick={() => onOpenAudit?.(firstAuditJob.legacy_client_id)}>
-            Open Paid Audit →
+        <div className="admin-topbar-meta">
+          <button className="btn-ghost admin-back-button" type="button" onClick={onBack}>
+            ← Back to Registered Users
           </button>
-        )}
+          {firstAuditJob?.legacy_client_id && (
+            <button className="btn-primary" onClick={() => onOpenAudit?.(firstAuditJob.legacy_client_id)}>
+              Open Paid Audit →
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="admin-grid admin-grid-three">

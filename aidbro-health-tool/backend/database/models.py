@@ -23,6 +23,9 @@ from database.connection import Base
 # Every free tool submission — with or without contact info
 # ══════════════════════════════════════════════════════════════════════════════
 
+# LEGACY MODEL — kept for backward compatibility with existing data only.
+# Do not use this model for any new features.
+# New features should use SearchRecord and AuditJob instead.
 class Lead(Base):
     __tablename__ = "leads"
 
@@ -109,6 +112,9 @@ class Lead(Base):
 # Stage 4 paying customers — auto-created on successful payment
 # ══════════════════════════════════════════════════════════════════════════════
 
+# LEGACY MODEL — kept for backward compatibility with existing data only.
+# Do not use this model for any new features.
+# New features should use SearchRecord and AuditJob instead.
 class AuditClient(Base):
     __tablename__ = "audit_clients"
 
@@ -303,6 +309,7 @@ class UserAccount(Base):
 # Every free audit run, whether anonymous or tied to a logged-in user
 # ══════════════════════════════════════════════════════════════════════════════
 
+# CURRENT MODEL — use this for all new features.
 class SearchRecord(Base):
     __tablename__ = "searches"
 
@@ -431,6 +438,7 @@ class PaymentOrder(Base):
 # One paid detailed audit job tied to a search and payment order
 # ══════════════════════════════════════════════════════════════════════════════
 
+# CURRENT MODEL — use this for all new features.
 class AuditJob(Base):
     __tablename__ = "audit_jobs"
 

@@ -45,7 +45,7 @@ export default function UsersTable({
         if (!cancelled) {
           setData(payload)
           if (!selectedUserId && payload.users?.length) {
-            onSelectUser?.(payload.users[0].id)
+            onSelectUser?.(payload.users[0].id, { openDetail: false })
           }
         }
       } catch (fetchError) {
@@ -116,7 +116,7 @@ export default function UsersTable({
                 <tr
                   key={user.id}
                   className={selectedUserId === user.id ? "active" : ""}
-                  onClick={() => onSelectUser?.(user.id)}
+                  onClick={() => onSelectUser?.(user.id, { openDetail: true })}
                 >
                   <td>
                     <div className="admin-table-title">{user.name || user.email}</div>

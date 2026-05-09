@@ -16,6 +16,7 @@ export default function LeadDetail({
   token,
   leadId,
   refreshKey,
+  onBack,
   onSaved,
   onOpenAudit,
   onUnauthorized,
@@ -140,6 +141,7 @@ export default function LeadDetail({
   const score = audit.score || {}
   const pagespeed = audit.pagespeed || {}
   const social = audit.social || {}
+
   return (
     <section className="admin-panel-card admin-panel-card-stretch">
       <div className="admin-section-header">
@@ -147,11 +149,16 @@ export default function LeadDetail({
           <h3>{lead.business_name || "Lead Detail"}</h3>
           <p>{lead.location || "No location"} · {lead.category || "General Business"}</p>
         </div>
-        {detail?.audit_client && (
-          <button className="btn-primary" onClick={() => onOpenAudit?.(detail.audit_client.id)}>
-            Open Paid Audit →
+        <div className="admin-topbar-meta">
+          <button className="btn-ghost admin-back-button" type="button" onClick={onBack}>
+            ← Back to Legacy Leads
           </button>
-        )}
+          {detail?.audit_client && (
+            <button className="btn-primary" onClick={() => onOpenAudit?.(detail.audit_client.id)}>
+              Open Paid Audit →
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="admin-grid admin-grid-three">

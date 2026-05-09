@@ -59,6 +59,9 @@ export default function AdminApp() {
   const [selectedLeadId, setSelectedLeadId] = useState(null)
   const [selectedUserId, setSelectedUserId] = useState(null)
   const [selectedAuditId, setSelectedAuditId] = useState(null)
+  const [showAnonymousDetail, setShowAnonymousDetail] = useState(false)
+  const [showLeadDetail, setShowLeadDetail] = useState(false)
+  const [showUserDetail, setShowUserDetail] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
   const handleLogout = useCallback(() => {
@@ -68,6 +71,9 @@ export default function AdminApp() {
     setSelectedLeadId(null)
     setSelectedUserId(null)
     setSelectedAuditId(null)
+    setShowAnonymousDetail(false)
+    setShowLeadDetail(false)
+    setShowUserDetail(false)
     sessionStorage.removeItem(TOKEN_KEY)
     sessionStorage.removeItem(USER_KEY)
   }, [])
@@ -260,69 +266,90 @@ export default function AdminApp() {
           )}
 
           {activePage === "anonymous" && (
-            <div className="admin-workspace admin-workspace-split">
-              <AnonymousSearches
-                token={token}
-                refreshKey={refreshKey}
-                selectedSearchId={selectedAnonymousSearchId}
-                onSelectSearch={setSelectedAnonymousSearchId}
-                onUnauthorized={handleLogout}
-              />
-              <AnonymousSearchDetail
-                token={token}
-                searchId={selectedAnonymousSearchId}
-                refreshKey={refreshKey}
-                onOpenAudit={(clientId) => {
-                  setSelectedAuditId(clientId)
-                  setActivePage("audits")
-                }}
-                onUnauthorized={handleLogout}
-              />
+            <div className="admin-workspace">
+              {showAnonymousDetail ? (
+                <AnonymousSearchDetail
+                  token={token}
+                  searchId={selectedAnonymousSearchId}
+                  refreshKey={refreshKey}
+                  onBack={() => setShowAnonymousDetail(false)}
+                  onOpenAudit={(clientId) => {
+                    setSelectedAuditId(clientId)
+                    setActivePage("audits")
+                  }}
+                  onUnauthorized={handleLogout}
+                />
+              ) : (
+                <AnonymousSearches
+                  token={token}
+                  refreshKey={refreshKey}
+                  selectedSearchId={selectedAnonymousSearchId}
+                  onSelectSearch={(searchId, options = {}) => {
+                    setSelectedAnonymousSearchId(searchId)
+                    setShowAnonymousDetail(Boolean(options.openDetail))
+                  }}
+                  onUnauthorized={handleLogout}
+                />
+              )}
             </div>
           )}
 
           {activePage === "users" && (
-            <div className="admin-workspace admin-workspace-split">
-              <UsersTable
-                token={token}
-                refreshKey={refreshKey}
-                selectedUserId={selectedUserId}
-                onSelectUser={setSelectedUserId}
-                onUnauthorized={handleLogout}
-              />
-              <UserDetail
-                token={token}
-                userId={selectedUserId}
-                refreshKey={refreshKey}
-                onOpenAudit={(clientId) => {
-                  setSelectedAuditId(clientId)
-                  setActivePage("audits")
-                }}
-                onUnauthorized={handleLogout}
-              />
+            <div className="admin-workspace">
+              {showUserDetail ? (
+                <UserDetail
+                  token={token}
+                  userId={selectedUserId}
+                  refreshKey={refreshKey}
+                  onBack={() => setShowUserDetail(false)}
+                  onOpenAudit={(clientId) => {
+                    setSelectedAuditId(clientId)
+                    setActivePage("audits")
+                  }}
+                  onUnauthorized={handleLogout}
+                />
+              ) : (
+                <UsersTable
+                  token={token}
+                  refreshKey={refreshKey}
+                  selectedUserId={selectedUserId}
+                  onSelectUser={(userId, options = {}) => {
+                    setSelectedUserId(userId)
+                    setShowUserDetail(Boolean(options.openDetail))
+                  }}
+                  onUnauthorized={handleLogout}
+                />
+              )}
             </div>
           )}
 
           {activePage === "leads" && (
-            <div className="admin-workspace admin-workspace-split">
-              <LeadsTable
-                token={token}
-                refreshKey={refreshKey}
-                selectedLeadId={selectedLeadId}
-                onSelectLead={setSelectedLeadId}
-                onUnauthorized={handleLogout}
-              />
-              <LeadDetail
-                token={token}
-                leadId={selectedLeadId}
-                refreshKey={refreshKey}
-                onSaved={bumpRefresh}
-                onOpenAudit={(clientId) => {
-                  setSelectedAuditId(clientId)
-                  setActivePage("audits")
-                }}
-                onUnauthorized={handleLogout}
-              />
+            <div className="admin-workspace">
+              {showLeadDetail ? (
+                <LeadDetail
+                  token={token}
+                  leadId={selectedLeadId}
+                  refreshKey={refreshKey}
+                  onBack={() => setShowLeadDetail(false)}
+                  onSaved={bumpRefresh}
+                  onOpenAudit={(clientId) => {
+                    setSelectedAuditId(clientId)
+                    setActivePage("audits")
+                  }}
+                  onUnauthorized={handleLogout}
+                />
+              ) : (
+                <LeadsTable
+                  token={token}
+                  refreshKey={refreshKey}
+                  selectedLeadId={selectedLeadId}
+                  onSelectLead={(leadId, options = {}) => {
+                    setSelectedLeadId(leadId)
+                    setShowLeadDetail(Boolean(options.openDetail))
+                  }}
+                  onUnauthorized={handleLogout}
+                />
+              )}
             </div>
           )}
 

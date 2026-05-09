@@ -440,6 +440,18 @@
   color: var(--red);
 }
 
+.admin-back-button {
+  background: rgba(255, 107, 0);
+  border-color: rgba(255, 107, 0, 0.55);
+  color: #fff3ea;
+  box-shadow: 0 10px 24px rgba(255, 107, 0, 0.14);
+}
+
+.admin-back-button:hover {
+  background: rgba(255, 107, 0, 0.28);
+  border-color: rgba(255, 107, 0, 0.75);
+}
+
 .admin-bar-chart {
   display: grid;
   gap: 12px;

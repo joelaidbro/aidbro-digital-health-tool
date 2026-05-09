@@ -45,7 +45,7 @@ export default function AnonymousSearches({
         if (!cancelled) {
           setData(payload)
           if (!selectedSearchId && payload.searches?.length) {
-            onSelectSearch?.(payload.searches[0].id)
+            onSelectSearch?.(payload.searches[0].id, { openDetail: false })
           }
         }
       } catch (fetchError) {
@@ -117,7 +117,7 @@ export default function AnonymousSearches({
                 <tr
                   key={row.id}
                   className={selectedSearchId === row.id ? "active" : ""}
-                  onClick={() => onSelectSearch?.(row.id)}
+                  onClick={() => onSelectSearch?.(row.id, { openDetail: true })}
                 >
                   <td>
                     <div className="admin-table-title">{row.business_name}</div>

@@ -16,6 +16,7 @@ export default function AnonymousSearchDetail({
   token,
   searchId,
   refreshKey,
+  onBack,
   onOpenAudit,
   onUnauthorized,
 }) {
@@ -95,11 +96,16 @@ export default function AnonymousSearchDetail({
           <h3>{search.business_name || "Anonymous Search"}</h3>
           <p>{search.location || "No location"} · {search.category || "General Business"}</p>
         </div>
-        {detail?.audit_client && (
-          <button className="btn-primary" onClick={() => onOpenAudit?.(detail.audit_client.id)}>
-            Open Paid Audit →
+        <div className="admin-topbar-meta">
+          <button className="btn-ghost admin-back-button" type="button" onClick={onBack}>
+            ← Back to Anonymous Searches
           </button>
-        )}
+          {detail?.audit_client && (
+            <button className="btn-primary" onClick={() => onOpenAudit?.(detail.audit_client.id)}>
+              Open Paid Audit →
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="admin-grid admin-grid-three">

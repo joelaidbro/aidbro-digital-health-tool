@@ -47,7 +47,7 @@ export default function LeadsTable({
         if (!cancelled) {
           setData(payload)
           if (!selectedLeadId && payload.leads?.length) {
-            onSelectLead?.(payload.leads[0].id)
+            onSelectLead?.(payload.leads[0].id, { openDetail: false })
           }
         }
       } catch (fetchError) {
@@ -126,7 +126,7 @@ export default function LeadsTable({
                 <tr
                   key={lead.id}
                   className={selectedLeadId === lead.id ? "active" : ""}
-                  onClick={() => onSelectLead?.(lead.id)}
+                  onClick={() => onSelectLead?.(lead.id, { openDetail: true })}
                 >
                   <td>
                     <div className="admin-table-title">{lead.business_name}</div>
