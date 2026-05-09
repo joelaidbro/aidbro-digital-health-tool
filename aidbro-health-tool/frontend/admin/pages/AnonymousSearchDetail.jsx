@@ -123,7 +123,13 @@ export default function AnonymousSearchDetail({
         <div><strong>Legacy lead:</strong> {detail?.legacy_lead?.id || "Not linked"}</div>
       </div>
 
-      <AuditJsonSections audit={audit} />
+      <AuditJsonSections
+        audit={audit}
+        manualContactName={search.manual_contact_name}
+        manualContactPhone={search.manual_contact_phone}
+        manualContactEmail={search.manual_contact_email}
+        searchDate={search.created_at}
+      />
 
       {error && <div className="admin-inline-message error">{error}</div>}
     </section>

@@ -224,7 +224,13 @@ export default function LeadDetail({
         />
       </label>
 
-      <AuditJsonSections audit={audit} />
+      <AuditJsonSections
+        audit={audit}
+        manualContactName={lead.contact_name}
+        manualContactPhone={lead.contact_phone}
+        manualContactEmail={lead.contact_email}
+        searchDate={lead.created_at}
+      />
 
       {(message || error) && (
         <div className={`admin-inline-message ${error ? "error" : "success"}`}>

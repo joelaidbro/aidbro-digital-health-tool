@@ -148,7 +148,13 @@ export default function UserDetail({
             <div><strong>Detected contact:</strong> {activeSearch.auto_email || "Not captured"}</div>
           </div>
 
-          <AuditJsonSections audit={activeSearch.audit_json || null} />
+          <AuditJsonSections
+            audit={activeSearch.audit_json || null}
+            manualContactName={activeSearch.manual_contact_name}
+            manualContactPhone={activeSearch.manual_contact_phone}
+            manualContactEmail={activeSearch.manual_contact_email}
+            searchDate={activeSearch.created_at}
+          />
         </>
       )}
 
