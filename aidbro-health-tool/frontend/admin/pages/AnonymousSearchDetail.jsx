@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react"
 
 import { API } from "../../src/config/api"
-import SearchAuditSnapshot from "../components/SearchAuditSnapshot"
+import AuditJsonSections from "../components/AuditJsonSections"
 
 function SummaryCard({ label, value }) {
   return (
     <div className="admin-summary-card">
       <div className="admin-summary-label">{label}</div>
-      <div className="admin-summary-value">{value || "—"}</div>
+      <div className="admin-summary-value">{value || "-"}</div>
     </div>
   )
 }
@@ -70,6 +70,13 @@ export default function AnonymousSearchDetail({
     }
   }, [token, searchId, refreshKey, onUnauthorized])
 
+  const search = detail?.search || {}
+  const audit = detail?.audit_json || null
+  const score = audit?.score || {}
+  const business = audit?.business || {}
+  const pagespeed = audit?.pagespeed || {}
+  const linkedAudit = detail?.linked_audit_job
+
   if (!searchId) {
     return <section className="admin-panel-card admin-placeholder">Select an anonymous search to inspect the captured result.</section>
   }
@@ -82,34 +89,29 @@ export default function AnonymousSearchDetail({
     return <section className="admin-panel-card admin-placeholder admin-error-text">{error}</section>
   }
 
-  const search = detail?.search || {}
-  const audit = detail?.audit_json || {}
-  const score = audit.score || {}
-  const business = audit.business || {}
-  const pagespeed = audit.pagespeed || {}
-  const linkedAudit = detail?.linked_audit_job
+  const scoreValue = Number(score.total_score || 0)
 
   return (
     <section className="admin-panel-card admin-panel-card-stretch">
       <div className="admin-section-header">
         <div>
           <h3>{search.business_name || "Anonymous Search"}</h3>
-          <p>{search.location || "No location"} · {search.category || "General Business"}</p>
+          <p>{search.location || "No location"} - {search.category || "General Business"}</p>
         </div>
         <div className="admin-topbar-meta">
           <button className="btn-ghost admin-back-button" type="button" onClick={onBack}>
-            ← Back to Anonymous Searches
+            &lt; Back to Anonymous Searches
           </button>
           {detail?.audit_client && (
             <button className="btn-primary" onClick={() => onOpenAudit?.(detail.audit_client.id)}>
-              Open Paid Audit →
+              Open Paid Audit -&gt;
             </button>
           )}
         </div>
       </div>
 
       <div className="admin-grid admin-grid-three">
-        <SummaryCard label="Total Score" value={score.total_score ? `${score.total_score}/100` : "—"} />
+        <SummaryCard label="Total Score" value={score.total_score ? `${score.total_score}/100` : "-"} />
         <SummaryCard label="PageSpeed" value={pagespeed.performance_score ? `${pagespeed.performance_score}/100` : "N/A"} />
         <SummaryCard label="Upgrade Status" value={linkedAudit ? linkedAudit.audit_status : "Not purchased"} />
       </div>
@@ -121,11 +123,7 @@ export default function AnonymousSearchDetail({
         <div><strong>Legacy lead:</strong> {detail?.legacy_lead?.id || "Not linked"}</div>
       </div>
 
-      <SearchAuditSnapshot
-        search={search}
-        audit={audit}
-        title="Full Search Result"
-      />
+      <AuditJsonSections audit={audit} />
 
       {error && <div className="admin-inline-message error">{error}</div>}
     </section>

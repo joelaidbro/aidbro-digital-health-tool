@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { API } from "../../src/config/api"
-import SearchAuditSnapshot from "../components/SearchAuditSnapshot"
+import AuditJsonSections from "../components/AuditJsonSections"
 
 function SummaryCard({ label, value }) {
   return (
@@ -148,11 +148,7 @@ export default function UserDetail({
             <div><strong>Detected contact:</strong> {activeSearch.auto_email || "Not captured"}</div>
           </div>
 
-          <SearchAuditSnapshot
-            search={activeSearch}
-            audit={activeSearch.audit_json || {}}
-            title="Selected Search Result"
-          />
+          <AuditJsonSections audit={activeSearch.audit_json || null} />
         </>
       )}
 

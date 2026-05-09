@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { API } from "../../src/config/api"
-import SearchAuditSnapshot from "../components/SearchAuditSnapshot"
+import AuditJsonSections from "../components/AuditJsonSections"
 
 function SummaryCard({ label, value }) {
   return (
@@ -224,11 +224,7 @@ export default function LeadDetail({
         />
       </label>
 
-      <SearchAuditSnapshot
-        search={lead}
-        audit={audit}
-        title="Full Search Result"
-      />
+      <AuditJsonSections audit={audit} />
 
       {(message || error) && (
         <div className={`admin-inline-message ${error ? "error" : "success"}`}>
