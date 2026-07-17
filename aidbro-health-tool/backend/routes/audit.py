@@ -1,6 +1,6 @@
 import asyncio
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone  # timedelta used for AUDIT_RESULT_CACHE_HOURS
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -25,8 +25,6 @@ from utils.auth_utils import decode_token
 
 router = APIRouter()
 
-ANONYMOUS_AUDIT_LIMIT = 2
-ANONYMOUS_AUDIT_WINDOW_DAYS = 7
 AUDIT_RESULT_CACHE_HOURS = 24
 
 
@@ -154,22 +152,14 @@ async def run_audit(
     user = await _get_request_user(db, request)
     requester_ip = request.client.host if request.client else None
 
-    if not user and requester_ip:
-        window_start = datetime.now(timezone.utc) - timedelta(days=ANONYMOUS_AUDIT_WINDOW_DAYS)
-        recent_count = await crud.count_recent_searches_by_ip(
-            db,
-            requester_ip,
-            window_start,
-            anonymous_only=True,
+    if not user:
+        raise HTTPException(401, "Please log in to run an audit.")
+
+    if not user.is_test_account and user.audit_credits <= 0:
+        raise HTTPException(
+            403,
+            "You have no audit credits remaining. Please purchase more to continue.",
         )
-        if recent_count >= ANONYMOUS_AUDIT_LIMIT:
-            raise HTTPException(
-                429,
-                (
-                    f"You have used the {ANONYMOUS_AUDIT_LIMIT} free audit tries available without login "
-                    f"in the last {ANONYMOUS_AUDIT_WINDOW_DAYS} days. Please log in to continue."
-                ),
-            )
 
     manual_social_inputs = _manual_socials(req)
     website_hint = normalise_url(req.website_url.strip()) if req.website_url else None
@@ -333,24 +323,28 @@ async def run_audit(
             {
                 **save_data,
                 "legacy_lead_id": lead.id,
-                "source_type": "user" if user else "anonymous",
+                "source_type": "user",
                 "status": "new",
             },
         )
         search_id = search.id
 
-        if user:
-            await crud.create_user_activity(
-                db,
-                user.id,
-                "search_created",
-                {
-                    "search_id": search.id,
-                    "business_name": req.business_name,
-                    "location": req.location,
-                    "score": score_data.get("total_score"),
-                },
-            )
+        await crud.create_user_activity(
+            db,
+            user.id,
+            "search_created",
+            {
+                "search_id": search.id,
+                "business_name": req.business_name,
+                "location": req.location,
+                "score": score_data.get("total_score"),
+            },
+        )
+
+        if not user.is_test_account:
+            user.audit_credits = max(0, user.audit_credits - 1)
+            await db.flush()
+
     except Exception as exc:
         print(f"[Lead Save] Failed: {exc}")
 

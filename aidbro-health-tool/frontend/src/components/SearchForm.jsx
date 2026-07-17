@@ -179,7 +179,7 @@ export default function SearchForm({ onSearch }) {
 
           <div className="hero-badge fade-up">
             <span className="dot" />
-            FREE · No Sign-up Required · 60 Second Audit
+            1 Credit Per Audit · 60 Second Results · AI-Powered
           </div>
 
           <h1 className="fade-up-d1">
@@ -204,7 +204,7 @@ export default function SearchForm({ onSearch }) {
                   Already have an account? Login
                 </a>
                 <a href="/register" className="btn-primary">
-                  Sign Up Free
+                  Create Account
                 </a>
               </>
             )}
@@ -416,7 +416,7 @@ export default function SearchForm({ onSearch }) {
                       Analyzing...
                     </>
                   ) : (
-                    <>🔍 Get My Free Digital Health Score</>
+                    <>🔍 Get My Digital Health Score</>
                   )}
                 </button>
               </div>
@@ -426,7 +426,7 @@ export default function SearchForm({ onSearch }) {
           {/* Trust badges */}
           <div className="trust-row fade-up-d4">
             {[
-              ["🔒", "100% Free"],
+              ["🎟️", "1 Credit / Run"],
               ["⚡", "60 Second Results"],
               ["📊", "5 Audit Pillars"],
               ["🤖", "AI-Powered Report"],

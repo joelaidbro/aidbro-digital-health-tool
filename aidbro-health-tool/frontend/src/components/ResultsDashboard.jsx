@@ -324,7 +324,7 @@ export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
         <div className="upgrade-sticky-banner">
           <span>🔒 Get human-verified competitor rankings, full SEO crawl, social media audit</span>
           <a href={isAuthenticated ? "/upgrade" : "/auth"} className="upgrade-sticky-btn">
-            {isAuthenticated ? `Unlock Detailed Audit for ${priceFormatted} →` : "Register Free →"}
+            {isAuthenticated ? `Unlock Detailed Audit for ${priceFormatted} →` : "Sign In to Unlock →"}
           </a>
         </div>
       )}
@@ -414,7 +414,7 @@ export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
                 className="btn-primary"
                 style={{ fontSize: 14 }}
               >
-                💬 Book Free Consultation
+                💬 Book a Consultation
               </a>
             </div>
           </div>
@@ -606,7 +606,7 @@ export default function ResultsDashboard({ data, leadId, searchId, onReset }) {
               </div>
               <div className="results-footer-cta-actions">
                 <button className="pdf-btn" onClick={handleDownloadPDF} disabled={pdfLoading}>
-                  <PdfButtonLabel loading={pdfLoading} text={pdfLoading ? "Generating PDF..." : "Free PDF"} />
+                  <PdfButtonLabel loading={pdfLoading} text={pdfLoading ? "Generating PDF..." : "Download PDF"} />
                 </button>
                 <a href={isAuthenticated ? "/upgrade" : "/auth"} className="btn-primary">
                   {isAuthenticated ? "⭐ Get Detailed Audit →" : "🔑 Register & Unlock →"}

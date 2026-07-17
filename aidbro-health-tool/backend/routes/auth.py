@@ -69,7 +69,14 @@ class AdminLoginRequest(BaseModel):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _token_response(email: str, role: str, name: str = "", has_paid: bool = False):
+def _token_response(
+    email: str,
+    role: str,
+    name: str = "",
+    has_paid: bool = False,
+    audit_credits: int = 0,
+    is_test_account: bool = False,
+):
     access  = create_access_token(email, role)
     refresh = create_refresh_token(email, role)
     return {
@@ -77,10 +84,12 @@ def _token_response(email: str, role: str, name: str = "", has_paid: bool = Fals
         "refresh_token": refresh,
         "token_type":    "bearer",
         "user": {
-            "email":    email,
-            "name":     name,
-            "role":     role,
-            "has_paid": has_paid,
+            "email":           email,
+            "name":            name,
+            "role":            role,
+            "has_paid":        has_paid,
+            "audit_credits":   audit_credits,
+            "is_test_account": is_test_account,
         }
     }
 
@@ -160,7 +169,12 @@ async def register(request: Request, req: RegisterRequest, db: AsyncSession = De
     else:
         await _ensure_shadow_client(db, req.email, password_hash)
 
-    data = _token_response(req.email, "client", req.name or "", has_paid=False)
+    data = _token_response(
+        req.email, "client", req.name or "",
+        has_paid=False,
+        audit_credits=user.audit_credits,
+        is_test_account=user.is_test_account,
+    )
     return JSONResponse(content={"success": True, **data})
 
 
@@ -178,7 +192,11 @@ async def login(request: Request, req: LoginRequest, db: AsyncSession = Depends(
         await crud.create_user_activity(db, user.id, "login", {"source": "email"})
         client = await _ensure_shadow_client(db, req.email, user.password_hash)
         has_paid = client.paid_at is not None
-        data = _token_response(req.email, "client", name=user.name or "", has_paid=has_paid)
+        data = _token_response(
+            req.email, "client", name=user.name or "", has_paid=has_paid,
+            audit_credits=user.audit_credits,
+            is_test_account=user.is_test_account,
+        )
         return JSONResponse(content={"success": True, **data})
 
     client = await crud.get_client_by_email(db, req.email)
@@ -198,7 +216,11 @@ async def login(request: Request, req: LoginRequest, db: AsyncSession = Depends(
     await crud.create_user_activity(db, migrated_user.id, "login", {"source": "legacy_client"})
 
     has_paid = client.paid_at is not None
-    data = _token_response(req.email, "client", name=migrated_user.name or "", has_paid=has_paid)
+    data = _token_response(
+        req.email, "client", name=migrated_user.name or "", has_paid=has_paid,
+        audit_credits=migrated_user.audit_credits,
+        is_test_account=migrated_user.is_test_account,
+    )
     return JSONResponse(content={"success": True, **data})
 
 
@@ -228,7 +250,11 @@ async def refresh_token(request: Request, db: AsyncSession = Depends(get_db)):
         if user:
             await crud.update_user_last_login(db, user.id)
             await crud.create_user_activity(db, user.id, "refresh", {"has_paid": has_paid})
-        data = _token_response(email, role, name=user.name if user else "", has_paid=has_paid)
+        data = _token_response(
+            email, role, name=user.name if user else "", has_paid=has_paid,
+            audit_credits=user.audit_credits if user else 0,
+            is_test_account=user.is_test_account if user else False,
+        )
     else:
         admin = await crud.get_admin_by_email(db, email)
         if not admin or not admin.is_active:
@@ -259,12 +285,14 @@ async def get_me(request: Request, db: AsyncSession = Depends(get_db)):
         if not user and not client:
             raise HTTPException(404, "Account not found.")
         return JSONResponse(content={
-            "email":        email,
-            "name":         user.name if user else "",
-            "role":         "client",
-            "has_paid":     client.paid_at is not None if client else False,
-            "audit_status": client.audit_status if client else "unsubscribed",
-            "plan_type":    client.plan_type if client else "none",
+            "email":           email,
+            "name":            user.name if user else "",
+            "role":            "client",
+            "has_paid":        client.paid_at is not None if client else False,
+            "audit_status":    client.audit_status if client else "unsubscribed",
+            "plan_type":       client.plan_type if client else "none",
+            "audit_credits":   user.audit_credits if user else 0,
+            "is_test_account": user.is_test_account if user else False,
         })
     else:
         admin = await crud.get_admin_by_email(db, email)
@@ -372,11 +400,13 @@ async def google_auth_callback(
 
         import urllib.parse
         params = urllib.parse.urlencode({
-            "token":      jwt_token,
-            "refresh":    refresh,
-            "email":      email,
-            "name":       name,
-            "has_paid":   str(has_paid).lower(),
+            "token":           jwt_token,
+            "refresh":         refresh,
+            "email":           email,
+            "name":            name,
+            "has_paid":        str(has_paid).lower(),
+            "audit_credits":   str(user.audit_credits),
+            "is_test_account": str(user.is_test_account).lower(),
         })
         return RedirectResponse(url=f"{FRONTEND_URL}/auth/callback?{params}")
 

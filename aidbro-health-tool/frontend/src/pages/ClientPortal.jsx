@@ -470,7 +470,7 @@ function SearchSnapshot({ snapshot, onUpgrade, onOpenAudit, onDownloadPdf, pdfLo
           <h3>{hasLinkedAudit ? "Your saved result is ready to review" : "Need a full manual report for this search?"}</h3>
           <p>
             {hasLinkedAudit
-              ? "Download the free audit PDF here, or switch to Audit Status / My Report for your paid workflow."
+              ? "Download the AI audit PDF here, or switch to Audit Status / My Report for your paid workflow."
               : "Select this saved audit and continue to the paid detailed audit flow."}
           </p>
         </div>
@@ -702,7 +702,7 @@ export default function ClientPortal({ onLogout }) {
 
   const handleNewSearch = () => {
     sessionStorage.removeItem("aidbro_active_search_id")
-    window.location.href = "/"
+    window.location.href = "/app"
   }
 
   const handleUpgrade = (search) => {
@@ -740,7 +740,7 @@ export default function ClientPortal({ onLogout }) {
   return (
     <div className="portal-page">
       <div className="portal-topbar">
-        <a href="/" className="portal-topbar-logo">
+        <a href="/app" className="portal-topbar-logo">
           <SiteLogo badge="Client Portal" />
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -874,14 +874,14 @@ export default function ClientPortal({ onLogout }) {
                   <h3>NO SAVED SEARCHES YET</h3>
                 </div>
                 <p className="insight-text">
-                  Once you run a free audit while logged in, it will appear here with its score,
+                  Once you run an audit while logged in, it will appear here with its score,
                   detected contact details, and an option to convert that exact search into a
                   detailed paid audit later.
                 </p>
                 <div className="insight-cta">
-                  <p>Start with a free audit and build your history from there.</p>
+                  <p>Run an audit and build your history from there.</p>
                   <button className="btn-primary" onClick={handleNewSearch}>
-                    Run Free Audit
+                    Run Audit
                   </button>
                 </div>
               </div>

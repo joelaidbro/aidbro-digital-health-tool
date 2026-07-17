@@ -79,6 +79,22 @@ async def _resolve_portal_audit_context(
     }
 
 
+@router.get("/portal/credits")
+async def get_credits(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns the current user's audit credit balance."""
+    email = _require_paid_client(request)
+    user = await crud.get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(404, "User account not found.")
+    return JSONResponse(content={
+        "audit_credits":   user.audit_credits,
+        "is_test_account": user.is_test_account,
+    })
+
+
 @router.get("/portal/history")
 async def get_portal_history(
     request: Request,
@@ -106,7 +122,9 @@ async def get_portal_history(
             }
             for search in searches
         ],
-        "audit_jobs": [job.to_dict() for job in audit_jobs],
+        "audit_jobs":     [job.to_dict() for job in audit_jobs],
+        "audit_credits":   user.audit_credits,
+        "is_test_account": user.is_test_account,
     })
 
 

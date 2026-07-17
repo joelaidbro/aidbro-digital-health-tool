@@ -4,7 +4,7 @@ import { useAuditPrice } from "../components/useAuditPrice"
 import { GOOGLE_AUTH_URL } from "../config/api"
 import SiteLogo from "../components/SiteLogo"
 
-export default function AuthPage({ onSuccess, initialMode = "login" }) {
+export default function AuthPage({ onSuccess, initialMode = "login", intent = null }) {
   const { register, login } = useAuth()
   const { formatted: priceFormatted } = useAuditPrice()
   const [mode, setMode]     = useState(initialMode) // login | register
@@ -125,11 +125,18 @@ export default function AuthPage({ onSuccess, initialMode = "login" }) {
 
         {/* Info box */}
         <div className="auth-info-box">
-          <p>
-            <b>🔒 Free to register.</b> After registering, you can purchase
-            the Detailed Audit ({priceFormatted}) to
-            unlock your full report.
-          </p>
+          {intent === "buy-credits" ? (
+            <p>
+              <b>Almost there!</b> Sign in or create your account, then complete
+              the ₹299 payment to activate your 2 AI audit credits.
+            </p>
+          ) : (
+            <p>
+              <b>🔒 Audit credits required.</b> Each ₹299 purchase gives you
+              2 AI audit credits. After signing in, you can purchase credits
+              or run an audit if you already have credits.
+            </p>
+          )}
         </div>
       </div>
     </div>

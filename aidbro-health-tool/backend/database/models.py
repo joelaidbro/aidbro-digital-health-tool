@@ -286,6 +286,8 @@ class UserAccount(Base):
     auth_provider: Mapped[str] = mapped_column(String(50), default="email")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    audit_credits: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
+    is_test_account: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
 
     searches: Mapped[list["SearchRecord"]] = relationship("SearchRecord", back_populates="user")
     payment_orders: Mapped[list["PaymentOrder"]] = relationship("PaymentOrder", back_populates="user")
@@ -301,6 +303,8 @@ class UserAccount(Base):
             "is_active": self.is_active,
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "audit_credits": self.audit_credits,
+            "is_test_account": self.is_test_account,
         }
 
 

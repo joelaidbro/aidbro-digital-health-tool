@@ -32,6 +32,9 @@ RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", RAZORPAY_KEY_SECR
 AUDIT_PRICE_INR = int(os.getenv("AUDIT_PRICE_INR", "2000"))
 AUDIT_PRICE_PAISE = AUDIT_PRICE_INR * 100
 PORTAL_ACCESS_DAYS = int(os.getenv("PORTAL_ACCESS_DAYS", "90"))
+AUDIT_CREDIT_PRICE_INR = int(os.getenv("AUDIT_CREDIT_PRICE_INR", "299"))
+AUDIT_CREDIT_PRICE_PAISE = AUDIT_CREDIT_PRICE_INR * 100
+AUDIT_CREDITS_PER_PURCHASE = int(os.getenv("AUDIT_CREDITS_PER_PURCHASE", "2"))
 
 
 def _razorpay_client():
@@ -426,6 +429,160 @@ async def payment_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         print(f"[Webhook] Error processing: {exc}")
 
     return JSONResponse(content={"status": "ok"})
+
+
+@router.post("/payment/credits/create-order")
+async def create_credits_order(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a Razorpay order for purchasing audit credits."""
+    email = _get_current_email(request)
+    if not email:
+        raise HTTPException(401, "Please log in before purchasing.")
+
+    user = await crud.get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(404, "Account not found.")
+
+    try:
+        rz = _razorpay_client()
+        receipt_stamp = int(datetime.now(timezone.utc).timestamp())
+        order = rz.order.create(
+            {
+                "amount": AUDIT_CREDIT_PRICE_PAISE,
+                "currency": "INR",
+                "receipt": f"credits_{user.id}_{receipt_stamp}",
+                "notes": {
+                    "user_id":    str(user.id),
+                    "user_email": email,
+                    "plan_type":  "audit_credits",
+                    "credits":    str(AUDIT_CREDITS_PER_PURCHASE),
+                },
+            }
+        )
+    except Exception as exc:
+        raise HTTPException(500, f"Could not create payment order: {str(exc)}")
+
+    await crud.create_payment_order_record(
+        db,
+        user_id=user.id,
+        search_id=None,
+        legacy_client_id=None,
+        legacy_lead_id=None,
+        razorpay_order_id=order["id"],
+        amount=AUDIT_CREDIT_PRICE_INR,
+        currency="INR",
+        status="created",
+        plan_type="audit_credits",
+    )
+
+    await crud.create_user_activity(
+        db,
+        user.id,
+        "credits_order_created",
+        {
+            "razorpay_order_id": order["id"],
+            "amount":            AUDIT_CREDIT_PRICE_INR,
+            "credits":           AUDIT_CREDITS_PER_PURCHASE,
+        },
+    )
+
+    return JSONResponse(
+        content={
+            "order_id":            order["id"],
+            "amount":              AUDIT_CREDIT_PRICE_PAISE,
+            "currency":            "INR",
+            "key_id":              RAZORPAY_KEY_ID,
+            "description":         f"Digital Audit Credits ({AUDIT_CREDITS_PER_PURCHASE} audits) — ₹{AUDIT_CREDIT_PRICE_INR}",
+            "prefill_email":       email,
+            "credits_per_purchase": AUDIT_CREDITS_PER_PURCHASE,
+            "price_inr":           AUDIT_CREDIT_PRICE_INR,
+        }
+    )
+
+
+@router.post("/payment/credits/verify")
+async def verify_credits_payment(
+    req: VerifyPaymentRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Verify Razorpay signature and add audit credits to the user's account."""
+    email = _get_current_email(request)
+    if not email:
+        raise HTTPException(401, "Not authenticated.")
+
+    expected_sig = hmac.new(
+        RAZORPAY_KEY_SECRET.encode(),
+        f"{req.razorpay_order_id}|{req.razorpay_payment_id}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected_sig, req.razorpay_signature):
+        raise HTTPException(400, "Payment verification failed — invalid signature.")
+
+    user = await crud.get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(404, "Account not found.")
+
+    order_record = await crud.get_payment_order_by_razorpay_order_id(db, req.razorpay_order_id)
+    if not order_record:
+        order_record = await crud.create_payment_order_record(
+            db,
+            user_id=user.id,
+            search_id=None,
+            legacy_client_id=None,
+            legacy_lead_id=None,
+            razorpay_order_id=req.razorpay_order_id,
+            amount=AUDIT_CREDIT_PRICE_INR,
+            currency="INR",
+            status="created",
+            plan_type="audit_credits",
+        )
+
+    if order_record.status == "paid":
+        return JSONResponse(
+            content={
+                "success":       True,
+                "message":       "Payment already verified.",
+                "credits_added": 0,
+                "total_credits": user.audit_credits,
+            }
+        )
+
+    now = datetime.now(timezone.utc)
+    order_record.razorpay_payment_id = req.razorpay_payment_id
+    order_record.status = "paid"
+    order_record.paid_at = now
+    order_record.amount = AUDIT_CREDIT_PRICE_INR
+    order_record.currency = "INR"
+    await db.flush()
+
+    user.audit_credits = user.audit_credits + AUDIT_CREDITS_PER_PURCHASE
+    await db.flush()
+    await db.refresh(user)
+
+    await crud.create_user_activity(
+        db,
+        user.id,
+        "credits_purchased",
+        {
+            "razorpay_order_id": req.razorpay_order_id,
+            "payment_id":        req.razorpay_payment_id,
+            "credits_added":     AUDIT_CREDITS_PER_PURCHASE,
+            "total_credits":     user.audit_credits,
+            "amount":            AUDIT_CREDIT_PRICE_INR,
+        },
+    )
+
+    return JSONResponse(
+        content={
+            "success":       True,
+            "message":       f"Payment confirmed! {AUDIT_CREDITS_PER_PURCHASE} audit credits added to your account.",
+            "credits_added": AUDIT_CREDITS_PER_PURCHASE,
+            "total_credits": user.audit_credits,
+        }
+    )
 
 
 @router.get("/payment/status")

@@ -56,10 +56,12 @@ export function AuthProvider({ children }) {
   // ── Handle Google OAuth callback (called from AuthCallbackPage) ───────────
   const handleGoogleCallback = useCallback((params) => {
     const userObj = {
-      email:    params.get("email"),
-      name:     params.get("name") || "",
-      role:     "client",
-      has_paid: params.get("has_paid") === "true",
+      email:           params.get("email"),
+      name:            params.get("name") || "",
+      role:            "client",
+      has_paid:        params.get("has_paid") === "true",
+      audit_credits:   parseInt(params.get("audit_credits") || "0", 10),
+      is_test_account: params.get("is_test_account") === "true",
     }
     saveSession(params.get("token"), userObj)
     return userObj
@@ -95,11 +97,27 @@ export function AuthProvider({ children }) {
     })
   }, [])
 
+  // ── Update audit_credits count (call after credit purchase or audit run) ──
+  const updateCredits = useCallback((newCount) => {
+    // Write sessionStorage synchronously so a page reload sees the new count
+    const stored = sessionStorage.getItem("aidbro_user")
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        sessionStorage.setItem("aidbro_user", JSON.stringify({ ...parsed, audit_credits: newCount }))
+      } catch {}
+    }
+    setUser((prev) => {
+      if (!prev) return prev
+      return { ...prev, audit_credits: newCount }
+    })
+  }, [])
+
   const value = {
     user, token, loading,
     register, login, logout,
     handleGoogleCallback,
-    authFetch, markPaid,
+    authFetch, markPaid, updateCredits,
     isAuthenticated: !!user,
     isPaid:          user?.has_paid === true,
     isAdmin:         user?.role !== "client",
