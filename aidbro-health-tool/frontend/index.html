@@ -50,10 +50,8 @@
   .site-nav-inner{
     display:flex;align-items:center;justify-content:space-between;
   }
-  .site-nav-logo{
-    font-size:1.35rem;font-weight:800;color:#fff;letter-spacing:-0.4px;
-  }
-  .site-nav-logo span{color:var(--accent);}
+  .site-nav-logo{display:inline-flex;align-items:center;}
+  .site-nav-logo img{height:32px;width:auto;}
   .site-nav-actions{display:flex;align-items:center;gap:10px;}
   .nav-signin{
     color:rgba(255,255,255,0.8);font-weight:600;font-size:14px;
@@ -286,13 +284,6 @@
     text-align:center;font-family:'Courier New',monospace;
     font-size:11.5px;color:#7aa2ff;margin-top:10px;letter-spacing:.3px;
   }
-  .scan-status .dots{
-    display:inline-block;width:0;overflow:hidden;
-    vertical-align:bottom;white-space:nowrap;
-    animation:dotsLoading 1.5s steps(3, end) infinite;
-  }
-  .scan-status .dots::after{content:"...";color:#ffb066;font-weight:700;}
-  @keyframes dotsLoading{0%{width:0;}100%{width:3ch;}}
 
   .badge{
     display:inline-block;
@@ -316,7 +307,8 @@
   }
   .price-card .label{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700;}
   .price-card .amount{font-size:2.6rem;font-weight:800;color:var(--navy);margin:6px 0 4px;}
-  .price-card .amount span{font-size:1.1rem;color:var(--muted);font-weight:600;}
+  .price-card .amount .dyn-price{font-size:inherit;color:inherit;font-weight:inherit;}
+  .price-card .amount span:not(.dyn-price){font-size:1.1rem;color:var(--muted);font-weight:600;}
   .price-card .features{font-size:13px;color:var(--muted);margin:10px 0 22px;}
   .cta-btn{
     display:inline-block;width:100%;
@@ -531,7 +523,9 @@
 <header class="hero">
   <nav class="site-nav">
     <div class="container site-nav-inner">
-      <a href="/" class="site-nav-logo">Aidbro<span>.</span></a>
+      <a href="/" class="site-nav-logo">
+        <img src="./aidbroai-logo.png" alt="Aidbro AI" />
+      </a>
       <div class="site-nav-actions">
         <a href="/auth" class="nav-signin">Sign In</a>
         <button class="nav-getstarted" onclick="payNow()">Get Started</button>
@@ -604,14 +598,14 @@
       </div>
       <div class="laptop-base"></div>
       <div class="laptop-shadow"></div>
-      <div class="scan-status">Scanning your digital presence<span class="dots"></span></div>
+      <div class="scan-status">Scanning your digital presence...</div>
     </div>
 
     <div class="price-card">
       <div class="label">Price</div>
-      <div class="amount">₹299 <span>Only</span></div>
-      <div class="features">2 AI Audits Included &bull; Instant Analysis &bull; Actionable Recommendations</div>
-      <button class="cta-btn" onclick="payNow()">Get My Digital Audit — ₹299</button>
+      <div class="amount">₹<span class="dyn-price">299</span> <span>Only</span></div>
+      <div class="features"><span class="dyn-credits">2</span> AI Audits Included &bull; Instant Analysis &bull; Actionable Recommendations</div>
+      <button class="cta-btn" onclick="payNow()">Get My Digital Audit — ₹<span class="dyn-price">299</span></button>
     </div>
   </div>
 </header>
@@ -776,8 +770,8 @@
     <div class="steps">
       <div class="step">
         <div class="num">1</div>
-        <strong>Pay ₹299</strong>
-        <p>Complete the secure one-time payment to get 2 audit credits.</p>
+        <strong>Pay ₹<span class="dyn-price">299</span></strong>
+        <p>Complete the secure one-time payment to get <span class="dyn-credits">2</span> audit credits.</p>
       </div>
       <div class="step">
         <div class="num">2</div>
@@ -843,7 +837,7 @@
     </details>
     <details class="faq-item">
       <summary>Is this a subscription?</summary>
-      <p>No. ₹299 is a one-time payment that gives you 2 audit credits. Buy more anytime you need.</p>
+      <p>No. ₹<span class="dyn-price">299</span> is a one-time payment that gives you <span class="dyn-credits">2</span> audit credits. Buy more anytime you need.</p>
     </details>
     <details class="faq-item">
       <summary>Will I get recommendations?</summary>
@@ -851,7 +845,7 @@
     </details>
     <details class="faq-item">
       <summary>What are audit credits?</summary>
-      <p>Each ₹299 purchase gives you 2 audit credits. Each credit lets you run one complete digital health audit for any business.</p>
+      <p>Each ₹<span class="dyn-price">299</span> purchase gives you <span class="dyn-credits">2</span> audit credits. Each credit lets you run one complete digital health audit for any business.</p>
     </details>
   </div>
 </section>
@@ -860,7 +854,7 @@
   <div class="container">
     <h2>Know Your Digital Strength Before Your Competitors Do.</h2>
     <p>Get your AI-Powered Digital Audit today and uncover opportunities to improve your online presence.</p>
-    <div class="price-tag">Only ₹299 — 2 Audits Included</div>
+    <div class="price-tag">Only ₹<span class="dyn-price">299</span> — <span class="dyn-credits">2</span> Audits Included</div>
     <button class="cta-btn" onclick="payNow()">Get My Digital Audit Now</button>
   </div>
 </section>
@@ -898,7 +892,7 @@
 
     <button class="nav-fab" onclick="payNow()" aria-label="Get My Digital Audit" title="Get My Digital Audit">
       <span class="nav-fab-currency">₹</span>
-      <span>299</span>
+      <span class="dyn-price">299</span>
     </button>
 
     <a class="nav-item" href="https://wa.me/918589999360?text=Hi%2C%20I%27m%20interested%20in%20the%20AI-Powered%20Digital%20Audit" target="_blank" rel="noopener noreferrer" aria-label="Contact us on WhatsApp" title="Contact us on WhatsApp">
@@ -912,6 +906,28 @@
   function payNow() {
     window.location.href = '/auth?intent=buy-credits';
   }
+
+  // Fetch price & credits from backend env — single source of truth
+  (function(){
+    fetch('/api/payment/credits/info')
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        var price   = data.price_inr;
+        var credits = data.credits_per_purchase;
+        if (price) {
+          document.querySelectorAll('.dyn-price').forEach(function(el){
+            el.textContent = price;
+          });
+          document.title = 'AI-Powered Digital Audit | ₹' + price + ' Only';
+        }
+        if (credits) {
+          document.querySelectorAll('.dyn-credits').forEach(function(el){
+            el.textContent = credits;
+          });
+        }
+      })
+      .catch(function(){/* backend unreachable — defaults remain */});
+  })();
 
   (function(){
     var bottomNav = document.getElementById('bottomNav');

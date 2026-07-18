@@ -1,12 +1,14 @@
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { useAuditPrice } from "../components/useAuditPrice"
+import { useCreditConfig } from "../config/creditConfig"
 import { GOOGLE_AUTH_URL } from "../config/api"
 import SiteLogo from "../components/SiteLogo"
 
 export default function AuthPage({ onSuccess, initialMode = "login", intent = null }) {
   const { register, login } = useAuth()
   const { formatted: priceFormatted } = useAuditPrice()
+  const { formatted: creditFormatted, credits_per_purchase } = useCreditConfig()
   const [mode, setMode]     = useState(initialMode) // login | register
   const [email, setEmail]   = useState("")
   const [password, setPw]   = useState("")
@@ -128,13 +130,13 @@ export default function AuthPage({ onSuccess, initialMode = "login", intent = nu
           {intent === "buy-credits" ? (
             <p>
               <b>Almost there!</b> Sign in or create your account, then complete
-              the ₹299 payment to activate your 2 AI audit credits.
+              the {creditFormatted} payment to activate your {credits_per_purchase} AI audit credits.
             </p>
           ) : (
             <p>
-              <b>🔒 Audit credits required.</b> Each ₹299 purchase gives you
-              2 AI audit credits. After signing in, you can purchase credits
-              or run an audit if you already have credits.
+              <b>🔒 Audit credits required.</b> Each {creditFormatted} purchase gives you{" "}
+              {credits_per_purchase} AI audit credits. After signing in, you can purchase
+              credits or run an audit if you already have credits.
             </p>
           )}
         </div>

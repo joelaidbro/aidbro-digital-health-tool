@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { AuthProvider, useAuth } from "./context/AuthContext"
+import { useCreditConfig } from "./config/creditConfig"
 import SearchForm from "./components/SearchForm"
 import ResultsDashboard from "./components/ResultsDashboard"
 import LoadingScreen from "./components/LoadingScreen"
@@ -35,6 +36,7 @@ function PublicShell({
 }
 
 function NoCreditsScreen() {
+  const { formatted, credits_per_purchase } = useCreditConfig()
   return (
     <PublicShell showFooter={false}>
       <div className="error-screen">
@@ -46,7 +48,7 @@ function NoCreditsScreen() {
             running digital health audits.
           </p>
           <a href="/buy-credits" className="btn-primary" style={{ marginBottom: 12 }}>
-            Buy 2 Credits — ₹299
+            Buy {credits_per_purchase} Credits — {formatted}
           </a>
           <a href="/portal" className="btn-secondary" style={{ display: "block", textAlign: "center" }}>
             View Past Audits
@@ -209,6 +211,7 @@ function InnerApp() {
 
 function CreditBadge() {
   const { user } = useAuth()
+  const { formatted: creditFormatted } = useCreditConfig()
   const credits = user?.audit_credits ?? 0
   const isTest  = user?.is_test_account ?? false
   const low     = !isTest && credits <= 1
@@ -238,7 +241,7 @@ function CreditBadge() {
             href="/buy-credits"
             style={{ color: "#ff7a00", fontWeight: 700, marginLeft: 4 }}
           >
-            Buy More
+            Buy More — {creditFormatted}
           </a>
         )}
       </span>
@@ -248,6 +251,7 @@ function CreditBadge() {
 
 function FreeAuditApp() {
   const { token, user, updateCredits } = useAuth()
+  const { formatted: creditFormatted } = useCreditConfig()
   const [state, setState] = useState("idle")
   const [results, setResults] = useState(null)
   const [leadId, setLeadId] = useState(null)
@@ -351,7 +355,7 @@ function FreeAuditApp() {
               <p>{error}</p>
               {noCredits && (
                 <a href="/buy-credits" className="btn-primary" style={{ marginBottom: 12 }}>
-                  Buy Credits — ₹299
+                  Buy Credits — {creditFormatted}
                 </a>
               )}
               <button className="btn-primary" onClick={handleReset}>Try Again</button>

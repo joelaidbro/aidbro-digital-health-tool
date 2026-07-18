@@ -37,6 +37,15 @@ AUDIT_CREDIT_PRICE_PAISE = AUDIT_CREDIT_PRICE_INR * 100
 AUDIT_CREDITS_PER_PURCHASE = int(os.getenv("AUDIT_CREDITS_PER_PURCHASE", "2"))
 
 
+@router.get("/payment/credits/info")
+async def get_credits_info():
+    """Public endpoint — returns current credit price and credits per purchase from env."""
+    return JSONResponse(content={
+        "price_inr":            AUDIT_CREDIT_PRICE_INR,
+        "credits_per_purchase": AUDIT_CREDITS_PER_PURCHASE,
+    })
+
+
 def _razorpay_client():
     if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
         raise HTTPException(500, "Razorpay not configured. Add keys to .env")

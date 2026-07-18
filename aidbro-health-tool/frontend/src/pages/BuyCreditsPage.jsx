@@ -1,10 +1,12 @@
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { API } from "../config/api"
+import { useCreditConfig } from "../config/creditConfig"
 import SiteLogo from "../components/SiteLogo"
 
 export default function BuyCreditsPage({ onSuccess }) {
   const { user, authFetch, updateCredits } = useAuth()
+  const { price_inr, credits_per_purchase, formatted } = useCreditConfig()
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState("")
   const [confirmed, setConfirmed] = useState(null)
@@ -183,7 +185,9 @@ export default function BuyCreditsPage({ onSuccess }) {
                   {isTest ? "Unlimited credits (test account)" : `You have ${credits} credit${credits !== 1 ? "s" : ""}`}
                 </div>
                 <div style={{ color: "#a0a8c2", fontSize: 13, marginTop: 2 }}>
-                  {isTest ? "No payment needed — go run an audit" : `You can run ${credits} more audit${credits !== 1 ? "s" : ""} right now`}
+                  {isTest
+                    ? "No payment needed — go run an audit"
+                    : `You can run ${credits} more audit${credits !== 1 ? "s" : ""} right now`}
                 </div>
               </div>
               <a href="/app" className="btn-primary" style={{ padding: "9px 18px", fontSize: 14, whiteSpace: "nowrap" }}>
@@ -194,7 +198,9 @@ export default function BuyCreditsPage({ onSuccess }) {
 
           <div className="payment-badge">AI Digital Audit Credits</div>
           <h2 className="payment-title">
-            {credits > 0 ? "Top Up Your Credits" : "Get 2 Audit Credits for ₹299"}
+            {credits > 0
+              ? "Top Up Your Credits"
+              : `Get ${credits_per_purchase} Audit Credits for ${formatted}`}
           </h2>
           <p className="payment-sub">
             Each credit runs one complete AI-powered digital health audit.
@@ -204,15 +210,17 @@ export default function BuyCreditsPage({ onSuccess }) {
           <div className="payment-price-block">
             <div className="payment-price">
               <span className="payment-currency">₹</span>
-              <span className="payment-amount">299</span>
+              <span className="payment-amount">{price_inr}</span>
             </div>
-            <div className="payment-price-label">one-time · 2 audit credits included</div>
+            <div className="payment-price-label">
+              one-time · {credits_per_purchase} audit credits included
+            </div>
           </div>
 
           <div className="payment-includes">
             <p className="payment-includes-title">WHAT YOU GET</p>
             {[
-              "2 AI-powered digital presence audits",
+              `${credits_per_purchase} AI-powered digital presence audits`,
               "Website quality & performance score",
               "SEO health analysis",
               "Social media presence check",
@@ -235,7 +243,11 @@ export default function BuyCreditsPage({ onSuccess }) {
             onClick={handleBuy}
             disabled={paying}
           >
-            {paying ? "Opening payment..." : credits > 0 ? "Buy 2 More Credits — ₹299" : "Pay ₹299 via UPI / Card"}
+            {paying
+              ? "Opening payment..."
+              : credits > 0
+                ? `Buy ${credits_per_purchase} More Credits — ${formatted}`
+                : `Pay ${formatted} via UPI / Card`}
           </button>
 
           <p className="payment-secure">Secured by Razorpay · UPI, Cards, Net Banking accepted</p>
